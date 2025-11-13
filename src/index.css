@@ -2,104 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Vanguardist Design System - Nordic Pastel Maximalism meets Digital Innovation
 All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    /* Kid-friendly warm gradient backgrounds */
-    --background: 45 100% 96%;
-    --foreground: 220 15% 25%;
+    /* Vibrant Innovation Palette - Light Mode */
+    --background: 240 100% 98%;
+    --foreground: 240 15% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 25%;
+    --card-foreground: 240 15% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 25%;
+    --popover-foreground: 240 15% 20%;
 
-    /* Warm, friendly primary color - sunny orange */
-    --primary: 25 95% 55%;
+    /* Electric Indigo - Main brand color */
+    --primary: 240 85% 65%;
     --primary-foreground: 0 0% 100%;
 
-    /* Soft secondary - gentle teal */
-    --secondary: 175 60% 85%;
-    --secondary-foreground: 175 60% 25%;
+    /* Neon Mint - Secondary refreshing color */
+    --secondary: 165 80% 65%;
+    --secondary-foreground: 0 0% 100%;
 
     /* Soft muted colors */
-    --muted: 45 40% 92%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 240 20% 96%;
+    --muted-foreground: 240 10% 50%;
 
-    /* Playful accent - bright purple */
-    --accent: 270 70% 65%;
+    /* Lavender Dream - Accent color */
+    --accent: 270 75% 75%;
     --accent-foreground: 0 0% 100%;
 
-    /* Gentle destructive */
-    --destructive: 0 70% 60%;
+    /* Coral Sunrise - Destructive */
+    --destructive: 15 95% 68%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Soft borders */
-    --border: 45 30% 88%;
-    --input: 45 30% 88%;
-    --ring: 25 95% 55%;
+    /* Glassmorphic borders */
+    --border: 240 30% 92%;
+    --input: 240 30% 92%;
+    --ring: 240 85% 65%;
 
-    --radius: 1rem;
+    --radius: 1.5rem;
 
-    /* Success color for correct answers */
-    --success: 140 60% 50%;
+    /* Success - Neon green */
+    --success: 140 80% 55%;
     --success-foreground: 0 0% 100%;
 
     /* Special quiz colors */
-    --quiz-correct: 140 60% 95%;
-    --quiz-correct-border: 140 60% 50%;
-    --quiz-wrong: 0 70% 95%;
-    --quiz-wrong-border: 0 70% 60%;
+    --quiz-correct: 140 80% 96%;
+    --quiz-correct-border: 140 80% 55%;
+    --quiz-wrong: 15 95% 96%;
+    --quiz-wrong-border: 15 95% 68%;
 
-    /* Gradient backgrounds */
-    --gradient-warm: linear-gradient(135deg, hsl(45 100% 96%), hsl(15 100% 96%));
-    --gradient-fun: linear-gradient(135deg, hsl(270 70% 85%), hsl(200 70% 85%));
+    /* Gradient definitions */
+    --gradient-primary: linear-gradient(135deg, hsl(240 85% 65%), hsl(165 80% 65%));
+    --gradient-secondary: linear-gradient(135deg, hsl(270 75% 75%), hsl(15 95% 68%));
+    --gradient-mesh: linear-gradient(135deg, 
+      hsl(240 100% 98%) 0%, 
+      hsl(165 100% 97%) 50%, 
+      hsl(270 100% 98%) 100%);
     
-    /* Soft shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(220 15% 25% / 0.08);
-    --shadow-card: 0 8px 30px -6px hsl(220 15% 25% / 0.12);
+    /* Glassmorphism */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.8);
+    
+    /* Soft colorful glows */
+    --glow-primary: 0 0 40px hsl(240 85% 65% / 0.3);
+    --glow-secondary: 0 0 40px hsl(165 80% 65% / 0.3);
+    --glow-accent: 0 0 40px hsl(270 75% 75% / 0.3);
+    --shadow-soft: 0 8px 32px -8px hsl(240 85% 65% / 0.15);
+    --shadow-card: 0 12px 48px -12px hsl(240 85% 65% / 0.2);
   }
 
   .dark {
-    --background: 220 20% 12%;
-    --foreground: 45 100% 96%;
+    --background: 240 20% 12%;
+    --foreground: 240 100% 98%;
 
-    --card: 220 20% 15%;
-    --card-foreground: 45 100% 96%;
+    --card: 240 20% 15%;
+    --card-foreground: 240 100% 98%;
 
-    --popover: 220 20% 15%;
-    --popover-foreground: 45 100% 96%;
+    --popover: 240 20% 15%;
+    --popover-foreground: 240 100% 98%;
 
-    --primary: 25 95% 55%;
+    --primary: 240 85% 65%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 175 40% 30%;
-    --secondary-foreground: 175 60% 85%;
+    --secondary: 165 80% 55%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 15% 20%;
-    --muted-foreground: 220 10% 65%;
+    --muted: 240 20% 20%;
+    --muted-foreground: 240 10% 70%;
 
-    --accent: 270 70% 65%;
+    --accent: 270 75% 70%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 60%;
+    --destructive: 15 95% 68%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 20%;
-    --input: 220 15% 20%;
-    --ring: 25 95% 55%;
+    --border: 240 20% 25%;
+    --input: 240 20% 25%;
+    --ring: 240 85% 65%;
 
-    --success: 140 60% 50%;
+    --success: 140 80% 55%;
     --success-foreground: 0 0% 100%;
 
-    --quiz-correct: 140 40% 20%;
-    --quiz-correct-border: 140 60% 50%;
-    --quiz-wrong: 0 50% 20%;
-    --quiz-wrong-border: 0 70% 60%;
+    --quiz-correct: 140 60% 20%;
+    --quiz-correct-border: 140 80% 55%;
+    --quiz-wrong: 15 70% 20%;
+    --quiz-wrong-border: 15 95% 68%;
+    
+    --glass-bg: rgba(30, 30, 50, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -110,16 +124,87 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    background: linear-gradient(135deg, hsl(45 100% 96%), hsl(15 100% 96%));
+    background: linear-gradient(135deg, 
+      hsl(240 100% 98%) 0%, 
+      hsl(165 100% 97%) 50%, 
+      hsl(270 100% 98%) 100%);
+    background-size: 400% 400%;
+    animation: gradient-shift 15s ease infinite;
     min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold;
   }
+
+  h1 {
+    @apply text-5xl md:text-6xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl;
+  }
 }
 
 @layer utilities {
+  /* Glassmorphism utilities */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  .glass-button {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(240 85% 65%), hsl(165 80% 65%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-accent {
+    background: linear-gradient(135deg, hsl(270 75% 75%), hsl(15 95% 68%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gradient borders */
+  .gradient-border {
+    position: relative;
+    border: 2px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                linear-gradient(135deg, hsl(240 85% 65%), hsl(165 80% 65%)) border-box;
+  }
+
+  /* Float animation for mascot */
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-15px) rotate(2deg);
+    }
+  }
+
+  /* Gentle bounce */
   .animate-bounce-gentle {
     animation: bounce-gentle 2s ease-in-out infinite;
   }
@@ -133,6 +218,7 @@ All colors MUST be HSL.
     }
   }
 
+  /* Wiggle animation */
   .animate-wiggle {
     animation: wiggle 1s ease-in-out;
   }
@@ -143,7 +229,112 @@ All colors MUST be HSL.
     75% { transform: rotate(5deg); }
   }
 
+  /* Spring bounce for buttons */
+  .animate-spring {
+    animation: spring-bounce 0.3s ease-out;
+  }
+
+  @keyframes spring-bounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    75% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  /* Glow pulse */
+  .animate-glow {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 20px currentColor;
+      opacity: 0.3;
+    }
+    50% {
+      box-shadow: 0 0 40px currentColor;
+      opacity: 0.6;
+    }
+  }
+
+  /* Gradient shift for backgrounds */
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Shimmer effect */
+  .animate-shimmer {
+    animation: shimmer 2s linear infinite;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* Quiz button with spring effect */
   .quiz-button {
     @apply transition-all duration-200 active:scale-95;
+  }
+
+  .quiz-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+  }
+
+  .quiz-button:active {
+    transform: translateY(0);
+  }
+
+  /* Card hover lift */
+  .card-lift {
+    @apply transition-all duration-300;
+  }
+
+  .card-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Pop-in animation */
+  .animate-pop-in {
+    animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  @keyframes pop-in {
+    0% {
+      opacity: 0;
+      transform: scale(0) rotate(-180deg);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+  }
+
+  /* Staggered fade-in */
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out forwards;
+    opacity: 0;
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
