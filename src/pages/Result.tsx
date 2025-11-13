@@ -49,41 +49,41 @@ const Result = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-md w-full space-y-6">
-        <Card className="p-8 space-y-6 text-center">
+      <div className="max-w-md w-full space-y-8">
+        <Card className="p-12 space-y-8 text-center">
           {/* Stars */}
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center gap-3">
             {[1, 2, 3].map((i) => (
               <Star
                 key={i}
-                className={`h-12 w-12 ${
+                className={`h-16 w-16 ${
                   i <= stars
-                    ? "fill-primary text-primary animate-in zoom-in"
+                    ? "fill-primary text-primary animate-pop-in"
                     : "text-muted"
                 }`}
-                style={{ animationDelay: `${i * 100}ms` }}
+                style={{ animationDelay: `${i * 150}ms` }}
               />
             ))}
           </div>
 
           {/* Score */}
-          <div className="space-y-2">
-            <p className="text-5xl font-bold text-primary">
+          <div className="space-y-4">
+            <p className="text-6xl md:text-7xl font-bold gradient-text">
               {score} / {total}
             </p>
-            <p className="text-2xl font-bold">{message}</p>
+            <p className="text-2xl md:text-3xl font-bold">{message}</p>
           </div>
 
           {/* Points */}
-          <Card className="p-4 bg-accent/20">
-            <p className="text-lg">
-              <span className="text-2xl">🪙</span> You earned{" "}
-              <span className="font-bold text-accent">+{points} points</span>
+          <Card className="p-6 bg-gradient-to-r from-accent/20 to-primary/20">
+            <p className="text-xl">
+              <span className="text-3xl">🪙</span> You earned{" "}
+              <span className="font-bold gradient-text-accent text-2xl">+{points} points</span>
             </p>
           </Card>
 
           {/* Encouragement */}
-          <div className="space-y-2 text-muted-foreground">
+          <div className="space-y-2 text-muted-foreground text-lg font-medium">
             {percentage >= 70 ? (
               <p>You really understood this story! Keep it up! 🎉</p>
             ) : (
@@ -95,30 +95,30 @@ const Result = () => {
         </Card>
 
         {/* Actions */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Button
             size="lg"
             variant="outline"
-            className="w-full h-14 text-lg rounded-2xl quiz-button"
+            className="w-full h-16 text-xl rounded-[24px] quiz-button font-semibold"
             onClick={() => navigate(`/book/${bookId}`)}
           >
-            <RotateCcw className="mr-2 h-5 w-5" />
+            <RotateCcw className="mr-2 h-6 w-6" />
             🔁 Try again
           </Button>
 
           <Button
             size="lg"
-            className="w-full h-14 text-lg rounded-2xl shadow-lg quiz-button"
+            className="w-full h-16 text-xl rounded-[24px] shadow-[0_8px_32px_rgba(99,102,241,0.3)] quiz-button font-semibold"
             onClick={() => navigate("/search")}
           >
-            <BookOpen className="mr-2 h-5 w-5" />
+            <BookOpen className="mr-2 h-6 w-6" />
             📚 Choose another book
           </Button>
 
           <Button
             size="lg"
-            variant="secondary"
-            className="w-full h-14 text-lg rounded-2xl quiz-button"
+            variant="gradient"
+            className="w-full h-16 text-xl rounded-[24px] quiz-button font-semibold"
             onClick={() => navigate("/")}
           >
             🏠 Go home

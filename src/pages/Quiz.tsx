@@ -118,35 +118,35 @@ const Quiz = () => {
 
   return (
     <div className="min-h-screen p-6 pb-24">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-2xl mx-auto space-y-8">
         {/* Progress */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-muted-foreground">
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm text-muted-foreground font-medium">
             <span>Question {currentQuestion + 1} of {questions.length}</span>
-            <span>Score: {score}</span>
+            <span className="gradient-text">Score: {score}</span>
           </div>
-          <Progress value={progress} className="h-3" />
+          <Progress value={progress} className="h-4" />
         </div>
 
         {/* Question */}
-        <Card className="p-6 space-y-4">
-          <div className="flex items-start gap-3">
-            <h2 className="text-xl md:text-2xl font-bold flex-1">
+        <Card className="p-8 space-y-4">
+          <div className="flex items-start gap-4">
+            <h2 className="text-2xl md:text-3xl font-bold flex-1 gradient-text">
               {currentQ.text}
             </h2>
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full flex-shrink-0"
+              className="rounded-full flex-shrink-0 hover:bg-accent/20"
               onClick={() => speakText(currentQ.text)}
             >
-              <Volume2 className="h-5 w-5" />
+              <Volume2 className="h-6 w-6" />
             </Button>
           </div>
         </Card>
 
         {/* Options */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {currentQ.options.map((option, index) => {
             const isSelected = selectedAnswer === index;
             const isCorrect = index === currentQ.correct_index;
@@ -156,21 +156,21 @@ const Quiz = () => {
             return (
               <Card
                 key={index}
-                className={`p-5 cursor-pointer transition-all quiz-button ${
+                className={`p-6 cursor-pointer transition-all quiz-button ${
                   showCorrect
                     ? "bg-quiz-correct border-2 border-quiz-correct-border"
                     : showWrong
                     ? "bg-quiz-wrong border-2 border-quiz-wrong-border"
                     : isSelected
-                    ? "border-2 border-primary"
+                    ? "border-2 border-primary shadow-[0_0_20px_rgba(99,102,241,0.3)]"
                     : "hover:border-primary/50"
                 }`}
                 onClick={() => handleAnswerSelect(index)}
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 text-lg font-medium">{option}</div>
-                  {showCorrect && <span className="text-2xl">✓</span>}
-                  {showWrong && <span className="text-2xl">✗</span>}
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 text-lg md:text-xl font-semibold">{option}</div>
+                  {showCorrect && <span className="text-3xl">✓</span>}
+                  {showWrong && <span className="text-3xl">✗</span>}
                 </div>
               </Card>
             );
@@ -179,17 +179,17 @@ const Quiz = () => {
 
         {/* Feedback */}
         {showFeedback && (
-          <Card className="p-6 text-center space-y-3 animate-in fade-in">
+          <Card className="p-8 text-center space-y-4 animate-in fade-in">
             {selectedAnswer === currentQ.correct_index ? (
               <>
-                <p className="text-2xl">🎉</p>
-                <p className="text-lg font-bold text-success">Awesome! You got it!</p>
+                <p className="text-4xl animate-pop-in">🎉</p>
+                <p className="text-2xl font-bold text-success">Awesome! You got it!</p>
               </>
             ) : (
               <>
-                <p className="text-2xl">💪</p>
-                <p className="text-lg font-bold">Good try! Keep going!</p>
-                <p className="text-muted-foreground">
+                <p className="text-4xl animate-wiggle">💪</p>
+                <p className="text-2xl font-bold">Good try! Keep going!</p>
+                <p className="text-muted-foreground text-lg font-medium mt-2">
                   The answer was: {currentQ.options[currentQ.correct_index]}
                 </p>
               </>
