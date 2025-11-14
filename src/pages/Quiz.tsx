@@ -40,42 +40,69 @@ const Quiz = () => {
   const { data: quizData, isLoading, error: quizError } = useQuery({
     queryKey: ["quiz", bookId, numQuestions, difficulty],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("generate-quiz", {
-        body: { bookId, numQuestions, difficulty },
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-quiz", {
+          body: { bookId, numQuestions, difficulty },
+        });
 
-      if (error) {
-        // Check if it's an insufficient_data error (422 status)
-        if (data?.error === "insufficient_data") {
-          toast.error(data.message || "This book doesn't have enough content to generate a quiz.");
-          navigate(`/book/${bookId}`);
-          throw new Error("insufficient_data");
+        if (error) {
+          // Check if it's an insufficient_data error (422 status)
+          if (data?.error === "insufficient_data") {
+            toast.error(data.message || "This book doesn't have enough content to generate a quiz.");
+            navigate(`/book/${bookId}`);
+            throw new Error("insufficient_data");
+          }
+          
+          // Network or server error
+          if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
+            toast.error("Network error. Please check your connection and try again.");
+            throw new Error("network_error");
+          }
+          
+          toast.error("Failed to generate quiz. Please try again.");
+          throw error;
         }
-        toast.error("Failed to generate quiz. Please try again.");
+
+        // Track quiz start event with validation
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        try {
+          const eventData = quizEventSchema.parse({
+            event_type: "quiz_started",
+            book_id: bookId,
+            age_band: difficulty,
+            user_id: user?.id,
+          });
+
+          await supabase.from("events").insert({
+            ...eventData,
+          });
+        } catch (validationError) {
+          console.error("Event validation failed:", validationError);
+        }
+
+        return data;
+      } catch (error: any) {
+        // Re-throw known errors
+        if (error.message === "insufficient_data" || error.message === "network_error") {
+          throw error;
+        }
+        
+        // Handle unexpected errors
+        console.error("Unexpected quiz generation error:", error);
+        toast.error("An unexpected error occurred. Please try again.");
         throw error;
       }
-
-      // Track quiz start event with validation
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      try {
-        const eventData = quizEventSchema.parse({
-          event_type: "quiz_started",
-          book_id: bookId,
-          age_band: difficulty,
-          user_id: user?.id,
-        });
-
-        await supabase.from("events").insert({
-          ...eventData,
-        });
-      } catch (validationError) {
-        console.error("Event validation failed:", validationError);
-      }
-
-      return data;
     },
-    retry: false, // Don't retry on insufficient_data errors
+    retry: (failureCount, error: any) => {
+      // Don't retry on insufficient_data or network errors
+      if (error.message === "insufficient_data" || error.message === "network_error") {
+        return false;
+      }
+      // Retry up to 2 times for other errors
+      return failureCount < 2;
+    },
+    retryDelay: 1000,
   });
 
   const questions: Question[] = quizData?.questions || [];

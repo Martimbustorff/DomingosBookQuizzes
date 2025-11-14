@@ -1,3 +1,4 @@
+import { Component, ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,37 +21,89 @@ import Settings from "./pages/Settings";
 import AdminPanel from "./pages/AdminPanel";
 import Contribute from "./pages/Contribute";
 import NotFound from "./pages/NotFound";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 const queryClient = new QueryClient();
 
+// Error Boundary Component
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error("Error caught by boundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+          <Card className="max-w-md w-full p-8 space-y-6 text-center">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-destructive">Oops!</h1>
+              <p className="text-lg text-muted-foreground">Something went wrong</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {this.state.error?.message || "An unexpected error occurred"}
+            </p>
+            <Button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.href = "/";
+              }}
+              className="w-full"
+            >
+              Return to Home
+            </Button>
+          </Card>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <Toaster />
-    <Sonner />
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/popular" element={<Popular />} />
-        <Route path="/book/:bookId" element={<BookDetail />} />
-        <Route path="/quiz" element={<Quiz />} />
-        <Route path="/result" element={<Result />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/parent-dashboard" element={<ParentDashboard />} />
-        <Route path="/child/:childId" element={<ChildProgress />} />
-        <Route path="/accept-invitation/:code" element={<AcceptInvitation />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/contribute" element={<Contribute />} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/popular" element={<Popular />} />
+          <Route path="/book/:bookId" element={<BookDetail />} />
+          <Route path="/quiz" element={<Quiz />} />
+          <Route path="/result" element={<Result />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/parent-dashboard" element={<ParentDashboard />} />
+          <Route path="/child/:childId" element={<ChildProgress />} />
+          <Route path="/accept-invitation/:code" element={<AcceptInvitation />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/contribute" element={<Contribute />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

@@ -29,16 +29,25 @@ const BookDetail = () => {
   });
 
   // Check for YouTube video
-  const { data: videoData } = useQuery({
+  const { data: videoData, error: videoError } = useQuery({
     queryKey: ["video", bookId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("get-book-media", {
-        body: { bookId },
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke("get-book-media", {
+          body: { bookId },
+        });
 
-      if (error) throw error;
-      return data;
+        if (error) {
+          console.error("Media fetch error:", error);
+          return { hasVideo: false, videoId: null };
+        }
+        return data;
+      } catch (error) {
+        console.error("Failed to fetch media:", error);
+        return { hasVideo: false, videoId: null };
+      }
     },
+    retry: 1,
   });
 
   // Check content quality
