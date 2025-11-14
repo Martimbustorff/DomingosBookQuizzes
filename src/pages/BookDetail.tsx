@@ -80,11 +80,11 @@ const BookDetail = () => {
             <img
               src={book.cover_url}
               alt={book.title}
-              className="w-32 h-44 object-cover rounded-lg shadow-md"
+              className="w-48 h-64 object-cover rounded-lg shadow-md"
             />
           ) : (
-            <div className="w-32 h-44 bg-secondary rounded-lg flex items-center justify-center">
-              <Book className="h-16 w-16 text-secondary-foreground" />
+            <div className="w-48 h-64 bg-secondary rounded-lg flex items-center justify-center">
+              <Book className="h-20 w-20 text-secondary-foreground" />
             </div>
           )}
 
