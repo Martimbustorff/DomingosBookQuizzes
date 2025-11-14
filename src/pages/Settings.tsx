@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, User, Mail, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Mail, Lock, Loader2, Shield } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -198,6 +198,30 @@ const Settings = () => {
             <p className="text-muted-foreground">Manage your account and preferences</p>
           </div>
         </div>
+
+        {/* Admin Panel Link */}
+        {roles.includes('admin') && (
+          <Card className="glass-card border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Admin Panel
+              </CardTitle>
+              <CardDescription>
+                Platform administration and analytics
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={() => navigate('/admin')} 
+                className="w-full"
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Open Admin Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Profile Information */}
         <Card className="glass-card">
