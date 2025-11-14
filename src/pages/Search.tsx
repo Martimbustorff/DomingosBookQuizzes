@@ -12,20 +12,31 @@ const Search = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Search books from API
-  const { data: searchResults, isLoading } = useQuery({
+  const { data: searchResults, isLoading, error: searchError } = useQuery({
     queryKey: ["book-search", searchQuery],
     queryFn: async () => {
       if (!searchQuery || searchQuery.length < 2) return [];
       
-      // Call backend search endpoint
-      const { data, error } = await supabase.functions.invoke("search-books", {
-        body: { query: searchQuery },
-      });
+      try {
+        // Call backend search endpoint
+        const { data, error } = await supabase.functions.invoke("search-books", {
+          body: { query: searchQuery },
+        });
 
-      if (error) throw error;
-      return data.books || [];
+        if (error) {
+          console.error("Search API error:", error);
+          throw new Error("Failed to search books");
+        }
+        
+        return data.books || [];
+      } catch (error: any) {
+        console.error("Search failed:", error);
+        throw error;
+      }
     },
     enabled: searchQuery.length >= 2,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   return (
@@ -72,6 +83,13 @@ const Search = () => {
               </Card>
             ))}
           </div>
+        )}
+
+        {searchError && searchQuery.length >= 2 && (
+          <Card className="p-6 text-center space-y-2">
+            <p className="text-muted-foreground">Unable to search at the moment</p>
+            <p className="text-sm text-muted-foreground">Please check your connection and try again</p>
+          </Card>
         )}
 
         {searchResults && searchResults.length > 0 && (
