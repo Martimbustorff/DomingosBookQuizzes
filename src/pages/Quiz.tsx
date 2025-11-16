@@ -36,6 +36,12 @@ const Quiz = () => {
     });
   }, []);
 
+  // Reset answer state when question changes to prevent visual bleed-through
+  useEffect(() => {
+    setSelectedAnswer(null);
+    setShowFeedback(false);
+  }, [currentQuestion]);
+
   // Fetch or generate quiz
   const { data: quizData, isLoading, error: quizError } = useQuery({
     queryKey: ["quiz", bookId, numQuestions, difficulty],
