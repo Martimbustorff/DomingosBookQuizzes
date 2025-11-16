@@ -24,6 +24,29 @@ async function fetchWithTimeout(url: string, timeoutMs = 10000) {
   }
 }
 
+/**
+ * Clean book description by removing promotional references to other books
+ */
+function cleanBookDescription(description: string, bookTitle: string): string {
+  // Remove sentences mentioning "From the creator(s) of..."
+  let cleaned = description.replace(/From the creators? of[^.!?]*[.!?]/gi, '');
+  
+  // Remove review quotes that might mention other books
+  cleaned = cleaned.replace(/"[^"]*Giraffes[^"]*"/gi, '');
+  
+  // Remove sentences with "also by" or "other books"
+  cleaned = cleaned.replace(/Also by[^.!?]*[.!?]/gi, '');
+  cleaned = cleaned.replace(/Other books[^.!?]*[.!?]/gi, '');
+  
+  // Remove sentences mentioning awards/reviews for other books
+  cleaned = cleaned.replace(/(?:Daily Telegraph|Guardian|Times|bestselling)[^.!?]*(?:Giraffes|dance)[^.!?]*[.!?]/gi, '');
+  
+  // Trim extra whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -355,6 +378,13 @@ CRITICAL: If you cannot find reliable information about this specific book, resp
       }
     }
 
+    // Clean promotional content from description
+    if (bookDescription) {
+      console.log(`Original description length: ${bookDescription.length} chars`);
+      bookDescription = cleanBookDescription(bookDescription, book.title);
+      console.log(`Cleaned description length: ${bookDescription.length} chars`);
+    }
+
     if (!bookDescription) {
       console.warn(`No description found for book: ${book.title} after trying all sources.`);
       return new Response(
@@ -420,7 +450,12 @@ ${bookDescription}
 
 ${bookSubjects.length > 0 ? `THEMES: ${bookSubjects.slice(0, 10).join(', ')}` : ''}
 
-CRITICAL: Base ALL questions ONLY on the book content provided above. DO NOT use general knowledge or make assumptions. If the book content doesn't mention specific details (like what was stolen or what characters did), DO NOT create questions about those details.
+CRITICAL RULES:
+1. Base ALL questions ONLY on the book "${book.title}" - NOT on any other books mentioned
+2. If the content mentions other books by the same author, IGNORE those references completely
+3. Only create questions about characters, events, and themes from "${book.title}" itself
+4. DO NOT create questions about reviews, awards, or other books
+5. If you cannot create ${numQuestions} questions from this specific book's content, say so
 
 CRITICAL REQUIREMENTS:
 - Generate EXACTLY ${numQuestions} questions
@@ -518,6 +553,27 @@ Return ONLY valid JSON in this exact format:
       if (typeof q.correct_index !== "number" || q.correct_index < 0 || q.correct_index > 3) {
         throw new Error("Invalid correct_index");
       }
+    }
+
+    // Validate generated questions don't reference wrong books
+    const invalidQuestions = questions.filter((q: any) => {
+      const questionText = q.text.toLowerCase();
+      const allText = questionText + ' ' + q.options.join(' ').toLowerCase();
+      
+      // Check for mentions of other books (add more patterns as needed)
+      const forbiddenPatterns = [
+        /giraffe(?!.*penguin)/i,  // "giraffe" without "penguin" nearby
+        /dance(?!.*penguin)/i,     // "dance" without "penguin" nearby
+      ];
+      
+      return forbiddenPatterns.some(pattern => pattern.test(allText));
+    });
+
+    if (invalidQuestions.length > 0) {
+      console.error(`Found ${invalidQuestions.length} questions about wrong books:`);
+      invalidQuestions.forEach((q: any) => console.error(`  - ${q.text}`));
+      
+      throw new Error(`Quiz generation included questions about wrong books. Please try again.`);
     }
 
     // Shuffle answer options for each question (Fisher-Yates algorithm)
