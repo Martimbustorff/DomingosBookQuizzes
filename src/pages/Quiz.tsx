@@ -274,8 +274,6 @@ const Quiz = () => {
                     ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-500 animate-pop-in"
                     : showWrong
                     ? "bg-muted/50 border-2 border-border"
-                    : isSelected
-                    ? "border-2 border-primary shadow-[0_0_20px_rgba(99,102,241,0.3)]"
                     : "hover:border-primary/50 active:scale-[0.98]"
                 }`}
                 onClick={() => handleAnswerSelect(index)}
