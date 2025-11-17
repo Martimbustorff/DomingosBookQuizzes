@@ -126,7 +126,10 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!existing) {
-        // Insert new book
+        // Insert new book from Open Library
+        // NOTE: age_min and age_max are intentionally left as NULL
+        // Books without age verification will not appear in Popular Books
+        // until an admin manually verifies and sets appropriate age ranges
         const { data: newBook, error } = await supabase
           .from("books")
           .insert({
@@ -134,6 +137,7 @@ serve(async (req) => {
             title: book.title,
             author: book.author,
             cover_url: book.cover_url,
+            // age_min: null, age_max: null (implicit - no defaults in schema)
           })
           .select()
           .single();

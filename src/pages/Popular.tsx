@@ -13,6 +13,8 @@ const Popular = () => {
   const { data: popularBooks, isLoading } = useQuery({
     queryKey: ["popular-books"],
     queryFn: async () => {
+      // The popular_books_dynamic view already filters for age-appropriate books
+      // This query fetches books that are verified as children's books (age_max <= 12)
       const { data, error } = await supabase
         .from("popular_books_dynamic")
         .select("*")
