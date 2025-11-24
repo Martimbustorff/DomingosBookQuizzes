@@ -28,7 +28,17 @@ const Login = () => {
       toast.success("Welcome back!");
       navigate("/");
     } catch (error: any) {
-      toast.error(error.message || "Failed to login");
+      console.error("Login error:", error);
+      
+      if (error.message?.includes("Failed to fetch")) {
+        toast.error("Cannot connect to authentication service. Please check your internet connection.");
+      } else if (error.message?.includes("Invalid login credentials")) {
+        toast.error("Invalid email or password. Please try again.");
+      } else if (error.message?.includes("Email not confirmed")) {
+        toast.error("Please confirm your email before logging in.");
+      } else {
+        toast.error(error.message || "Failed to login");
+      }
     } finally {
       setLoading(false);
     }
