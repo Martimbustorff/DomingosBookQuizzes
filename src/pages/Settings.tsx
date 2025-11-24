@@ -194,7 +194,7 @@ const Settings = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold gradient-text">Account Settings</h1>
+            <h1 className="text-3xl font-bold text-foreground">Account Settings</h1>
             <p className="text-muted-foreground">Manage your account and preferences</p>
           </div>
         </div>
