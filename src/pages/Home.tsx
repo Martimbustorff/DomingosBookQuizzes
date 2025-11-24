@@ -36,10 +36,10 @@ const Home = () => {
     }
   };
   return <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 animate-fade-in">
         <AuthButton />
       </div>
-      <div className="max-w-md w-full space-y-8 sm:space-y-12 text-center">
+      <div className="max-w-md w-full space-y-8 sm:space-y-12 text-center animate-fade-in">
         {/* Mascot */}
         <div className="flex justify-center animate-float">
           <img alt="Domingos the Reading Bulldog" src="/lovable-uploads/1df14f40-654b-44ac-85e9-d12419d1d644.png" className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 drop-shadow-2xl object-contain" />
