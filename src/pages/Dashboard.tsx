@@ -148,7 +148,7 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold gradient-text">Your Dashboard</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Your Dashboard</h1>
             <p className="text-muted-foreground mt-2">Track your reading journey and achievements</p>
           </div>
           <Button variant="outline" onClick={() => navigate("/")} className="rounded-[24px]">
