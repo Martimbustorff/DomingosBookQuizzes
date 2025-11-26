@@ -24,7 +24,6 @@ import AdminPanel from "./pages/AdminPanel";
 import Contribute from "./pages/Contribute";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/Privacy";
-import AgeGate from "./pages/AgeGate";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -130,7 +129,6 @@ const AppContent = () => {
         <Routes>
           {/* Public routes (no onboarding check) */}
           <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/age-gate" element={<AgeGate />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
