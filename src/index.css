@@ -217,6 +217,16 @@ All colors MUST be HSL.
                 linear-gradient(135deg, hsl(240 85% 65%), hsl(165 80% 65%)) border-box;
   }
 
+  /* Hide scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Float animation for mascot */
   .animate-float {
     animation: float 3s ease-in-out infinite;
