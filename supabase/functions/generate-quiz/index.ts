@@ -332,6 +332,7 @@ CRITICAL: If you cannot find reliable information about this specific book, resp
               { role: "system", content: "You are a research assistant. Search the web for accurate book information." },
               { role: "user", content: searchPrompt }
             ],
+            tools: [{ google_search: {} }]  // Enable Google Search grounding
           }),
         });
         
