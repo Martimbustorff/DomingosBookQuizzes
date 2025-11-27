@@ -335,12 +335,12 @@ const Quiz = () => {
                 onClick={() => handleAnswerSelect(index)}
                 className={cn(
                   "w-full p-4 text-left font-medium text-base min-h-[56px] rounded-xl h-auto whitespace-normal justify-start transition-all duration-150 shadow-sm bg-white border-2 border-gray-200 text-foreground",
+                  "hover:bg-white",
                   !showFeedback && "active:scale-[0.98] active:bg-gray-50",
                   showCorrect && "!border-quiz-correct-border !bg-quiz-correct",
                   showWrong && "!border-quiz-wrong-border !bg-quiz-wrong"
                 )}
                 disabled={showFeedback}
-                variant="ghost"
                 style={{ outline: 'none', boxShadow: showFeedback ? undefined : '0 1px 3px rgba(0,0,0,0.1)' }}
               >
                 <span className="flex items-center gap-3 w-full">
