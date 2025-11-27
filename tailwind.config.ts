@@ -99,28 +99,58 @@ export default {
   			xl: '20px',
   			full: '9999px'
   		},
-  		keyframes: {
-  			'accordion-down': {
-  				from: {
-  					height: '0'
-  				},
-  				to: {
-  					height: 'var(--radix-accordion-content-height)'
-  				}
-  			},
-  			'accordion-up': {
-  				from: {
-  					height: 'var(--radix-accordion-content-height)'
-  				},
-  				to: {
-  					height: '0'
-  				}
-  			}
-  		},
-  		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
+		keyframes: {
+			'accordion-down': {
+				from: {
+					height: '0'
+				},
+				to: {
+					height: 'var(--radix-accordion-content-height)'
+				}
+			},
+			'accordion-up': {
+				from: {
+					height: 'var(--radix-accordion-content-height)'
+				},
+				to: {
+					height: '0'
+				}
+			},
+			'fill-bar': {
+				from: {
+					width: '0',
+					opacity: '0'
+				},
+				to: {
+					opacity: '1'
+				}
+			},
+			'bounce-subtle': {
+				'0%, 100%': {
+					transform: 'translateY(0)'
+				},
+				'50%': {
+					transform: 'translateY(-10px)'
+				}
+			},
+			'fade-in': {
+				from: {
+					opacity: '0',
+					transform: 'translateY(10px)'
+				},
+				to: {
+					opacity: '1',
+					transform: 'translateY(0)'
+				}
+			}
+		},
+		animation: {
+			'accordion-down': 'accordion-down 0.2s ease-out',
+			'accordion-up': 'accordion-up 0.2s ease-out',
+			'fill-bar': 'fill-bar 0.8s ease-out forwards',
+			'bounce-subtle': 'bounce-subtle 3s ease-in-out infinite',
+			'fade-in': 'fade-in 0.3s ease-out'
+		}
   	}
   },
   plugins: [require("tailwindcss-animate")],

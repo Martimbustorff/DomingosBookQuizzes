@@ -1,13 +1,17 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Book } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BookListSkeleton } from "@/components/shared";
 import { PopularBook } from "@/types";
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
+import { FeaturedCarousel } from "@/components/popular/FeaturedCarousel";
+import { BookCard } from "@/components/popular/BookCard";
+import { FilterChips, FilterType } from "@/components/popular/FilterChips";
+import mascotBulldog from "@/assets/mascot-bulldog.png";
 
 const INITIAL_LOAD = 20;
 const LOAD_MORE_AMOUNT = 20;
@@ -16,12 +20,11 @@ const Popular = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [displayCount, setDisplayCount] = useState(INITIAL_LOAD);
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
 
   const { data: allPopularBooks, isLoading } = useQuery({
     queryKey: ["popular-books"],
     queryFn: async () => {
-      // The popular_books_dynamic view already filters for age-appropriate books
-      // This query fetches books that are verified as children's books (age_max <= 12)
       const { data, error } = await supabase
         .from("popular_books_dynamic")
         .select("*")
@@ -29,7 +32,6 @@ const Popular = () => {
 
       if (error) throw error;
       
-      // Fallback: if no quiz data yet, show recently added books
       if (!data || data.length === 0) {
         const { data: fallback } = await supabase
           .from("books")
@@ -51,132 +53,139 @@ const Popular = () => {
     },
   });
 
-  const searchedBooks = useMemo(() => {
-    if (!allPopularBooks || !searchQuery) return allPopularBooks;
-    
-    const query = searchQuery.toLowerCase();
-    return allPopularBooks.filter((book: PopularBook) => 
-      book.title?.toLowerCase().includes(query) ||
-      book.author?.toLowerCase().includes(query)
-    );
-  }, [allPopularBooks, searchQuery]);
+  const filteredBooks = useMemo(() => {
+    if (!allPopularBooks) return [];
 
-  // Apply pagination only when not searching
+    let filtered = [...allPopularBooks];
+
+    // Apply filter
+    switch (activeFilter) {
+      case "hot":
+        filtered = filtered.filter(book => book.quiz_count >= 3);
+        break;
+      case "top-rated":
+        filtered = filtered
+          .filter(book => book.avg_score !== null)
+          .sort((a, b) => (b.avg_score || 0) - (a.avg_score || 0));
+        break;
+      case "most-read":
+        filtered = filtered.sort((a, b) => b.quiz_count - a.quiz_count);
+        break;
+    }
+
+    // Apply search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((book: PopularBook) => 
+        book.title?.toLowerCase().includes(query) ||
+        book.author?.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [allPopularBooks, activeFilter, searchQuery]);
+
   const popularBooks = useMemo(() => {
-    if (searchQuery.trim()) return searchedBooks;
-    return searchedBooks?.slice(0, displayCount);
-  }, [searchedBooks, displayCount, searchQuery]);
+    if (searchQuery.trim()) return filteredBooks;
+    return filteredBooks?.slice(0, displayCount);
+  }, [filteredBooks, displayCount, searchQuery]);
 
-  const hasMore = !searchQuery.trim() && displayCount < (searchedBooks?.length || 0);
+  const hasMore = !searchQuery.trim() && displayCount < (filteredBooks?.length || 0);
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 pb-24">
-      <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
-        {/* Header */}
-        <div className="flex items-center gap-3 sm:gap-4">
+    <div className="min-h-screen pb-24">
+      {/* Header */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/50 px-4 py-3">
+        <div className="max-w-2xl mx-auto flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/")}
             className="rounded-full hover:bg-accent/20 min-w-[44px] min-h-[44px] flex-shrink-0"
           >
-            <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground">⭐ Popular books</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">⭐ Popular</h1>
         </div>
+      </div>
 
-        <div className="space-y-4">
-          <p className="text-muted-foreground text-lg sm:text-xl font-medium px-2">
-            Books that kids love reading!
-          </p>
-
-          {/* Search Bar */}
-          <div className="px-2">
-            <Input
-              type="search"
-              placeholder="Search books by title or author..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full"
-            />
+      <div className="max-w-2xl mx-auto px-4 space-y-6 mt-6">
+        {/* Featured Carousel - Top 3 */}
+        {!isLoading && allPopularBooks && allPopularBooks.length >= 3 && (
+          <div className="space-y-3">
+            <h2 className="text-lg font-bold text-foreground px-2">🏆 Trending Now</h2>
+            <FeaturedCarousel books={allPopularBooks} />
           </div>
+        )}
 
-          {/* Book Count */}
-          {!isLoading && popularBooks && (
-            <p className="text-sm text-muted-foreground px-2">
-              Showing <span className="font-semibold text-foreground">{popularBooks.length}</span> 
-              {searchQuery ? ' matching' : ''} children's book{popularBooks.length !== 1 ? 's' : ''}
-              {hasMore && ` (${searchedBooks?.length || 0} total)`}
-            </p>
-          )}
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder={`Search ${allPopularBooks?.length || 0} books...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-12 h-14 rounded-full shadow-sm border-2 focus:border-primary"
+          />
         </div>
+
+        {/* Filter Chips */}
+        <FilterChips activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+
+        {/* Book Count */}
+        {!isLoading && popularBooks && (
+          <p className="text-sm text-muted-foreground px-2">
+            Showing <span className="font-semibold text-foreground">{popularBooks.length}</span> 
+            {searchQuery ? ' matching' : ''} book{popularBooks.length !== 1 ? 's' : ''}
+            {hasMore && ` (${filteredBooks?.length || 0} total)`}
+          </p>
+        )}
 
         {/* Books List */}
         {isLoading && <BookListSkeleton count={20} />}
 
         {popularBooks && popularBooks.length > 0 && (
-          <div className="space-y-4 sm:space-y-6">
-            {popularBooks.map((book: PopularBook) => {
-              return (
-                <Card
-                  key={book.book_id}
-                  className="p-5 cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all duration-200"
-                  onClick={() => navigate(`/book/${book.book_id}`)}
-                >
-                  <div className="flex gap-4 items-start">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shadow-sm">
-                      {book.ranking}
-                    </div>
-                    {book.cover_url ? (
-                      <img
-                        src={book.cover_url}
-                        alt={book.title}
-                        className="w-16 h-20 sm:w-20 sm:h-24 object-cover rounded-lg shadow-sm flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-16 h-20 sm:w-20 sm:h-24 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Book className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg">{book.title}</h3>
-                      {book.author && (
-                        <p className="text-muted-foreground text-sm">by {book.author}</p>
-                      )}
-                      {book.quiz_count > 0 && (
-                        <p className="text-muted-foreground text-xs mt-2">
-                          🎯 {book.quiz_count} quiz{book.quiz_count !== 1 ? 'zes' : ''} • 
-                          👥 {book.unique_users} reader{book.unique_users !== 1 ? 's' : ''}{book.avg_score && ` • ⭐ ${book.avg_score}% avg`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
+          <div className="space-y-3">
+            {popularBooks.map((book: PopularBook, index: number) => (
+              <BookCard key={book.book_id} book={book} index={index} />
+            ))}
           </div>
         )}
 
+        {/* Empty State */}
         {!isLoading && (!popularBooks || popularBooks.length === 0) && (
-          <Card className="p-12 text-center">
-            <p className="text-xl text-muted-foreground font-medium">
+          <Card className="p-12 text-center space-y-4 animate-fade-in">
+            <div className="flex justify-center">
+              <img 
+                src={mascotBulldog} 
+                alt="Domingos" 
+                className="w-32 h-32 object-contain animate-bounce-subtle"
+              />
+            </div>
+            <p className="text-xl text-foreground font-bold">
               {searchQuery 
-                ? `No books found matching "${searchQuery}"`
-                : "No popular books available yet. Check back soon! 📚"}
+                ? "No books found 📚"
+                : "No popular books yet"}
+            </p>
+            <p className="text-muted-foreground">
+              {searchQuery 
+                ? `Try searching for something else`
+                : "Check back soon for trending books!"}
             </p>
           </Card>
         )}
 
-        {/* Load More Button */}
+        {/* Load More Button - Floating */}
         {hasMore && !isLoading && (
-          <div className="flex justify-center pt-4">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4">
             <Button
-              variant="outline"
+              variant="default"
               size="lg"
               onClick={() => setDisplayCount(prev => prev + LOAD_MORE_AMOUNT)}
-              className="rounded-[24px]"
+              className="w-full rounded-full shadow-xl backdrop-blur-xl bg-primary/90 hover:bg-primary min-h-[56px] font-bold"
             >
-              Load More Books
+              ↓ Load More ({displayCount}/{filteredBooks?.length || 0})
             </Button>
           </div>
         )}
