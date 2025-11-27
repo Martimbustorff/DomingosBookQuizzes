@@ -301,56 +301,6 @@ serve(async (req) => {
       }
     }
 
-    // Priority 4: Skip duplicate user content check (already done as Priority 1)
-
-    // Priority 4: Use Lovable AI web search as LAST RESORT
-    if (!bookDescription) {
-      try {
-        console.log(`[5/5] Using AI web search as last resort...`);
-        
-        const searchPrompt = `Search for a detailed plot summary of the children's book "${book.title}" by ${book.author || "unknown author"}. 
-
-Return a factual 200-300 word plot summary that includes:
-- Main characters and their names
-- Key plot events in sequence
-- Important details like objects, locations, and what happens
-- How the story resolves
-
-CRITICAL: If you cannot find reliable information about this specific book, respond with exactly: NO_INFO_FOUND`;
-
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        
-        const aiSearchResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: "You are a research assistant. Search the web for accurate book information." },
-              { role: "user", content: searchPrompt }
-            ],
-            tools: [{ google_search: {} }]  // Enable Google Search grounding
-          }),
-        });
-        
-        if (aiSearchResponse.ok) {
-          const aiSearchData = await aiSearchResponse.json();
-          const summary = aiSearchData.choices?.[0]?.message?.content;
-          
-          if (summary && !summary.includes("NO_INFO_FOUND")) {
-            bookDescription = summary;
-            contentSource = "ai_web_search";
-            console.log(`✓ AI Web Search: Generated description (${bookDescription.length} chars)`);
-          }
-        }
-      } catch (error) {
-        console.error("AI web search failed:", error);
-      }
-    }
-
     console.log(`=== Content Fetching Complete ===`);
     console.log(`Source used: ${contentSource}`);
     console.log(`Description length: ${bookDescription ? bookDescription.length : 0} chars`);
@@ -388,8 +338,61 @@ CRITICAL: If you cannot find reliable information about this specific book, resp
       console.log(`Cleaned description length: ${bookDescription.length} chars`);
     }
 
+    // Priority 4: Use Lovable AI web search as LAST RESORT (after validation fails)
     if (!bookDescription) {
-      console.warn(`No description found for book: ${book.title} after trying all sources.`);
+      try {
+        console.log(`[LAST RESORT] Using AI web search with Google Search grounding...`);
+        
+        const searchPrompt = `Search the web for a detailed plot summary of the children's book "${book.title}" by ${book.author || "unknown author"}. 
+
+Find and return a factual 200-300 word plot summary that includes:
+- Main characters and their names
+- Key plot events in sequence
+- Important details like objects, locations, and what happens
+- How the story resolves
+
+CRITICAL: Search for the EXACT book title and author. If you cannot find reliable information about this specific book, respond with exactly: NO_INFO_FOUND`;
+
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        
+        const aiSearchResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: "You are a research assistant with access to web search. Always search for the exact book title and author provided. Return detailed, accurate summaries only." },
+              { role: "user", content: searchPrompt }
+            ],
+            tools: [{ google_search: {} }]  // Enable Google Search grounding
+          }),
+        });
+        
+        if (aiSearchResponse.ok) {
+          const aiSearchData = await aiSearchResponse.json();
+          const summary = aiSearchData.choices?.[0]?.message?.content;
+          
+          if (summary && !summary.includes("NO_INFO_FOUND")) {
+            bookDescription = summary;
+            contentSource = "ai_web_search_last_resort";
+            console.log(`✓ AI Web Search (last resort): Generated description (${bookDescription.length} chars)`);
+          } else {
+            console.log(`✗ AI Web Search: No information found for this book`);
+          }
+        } else {
+          const errorText = await aiSearchResponse.text();
+          console.error(`AI web search failed: ${aiSearchResponse.status} - ${errorText}`);
+        }
+      } catch (error) {
+        console.error("AI web search failed:", error);
+      }
+    }
+
+    if (!bookDescription) {
+      console.warn(`No description found for book: ${book.title} after trying all sources including AI web search.`);
       return new Response(
         JSON.stringify({
           error: "insufficient_data",
