@@ -285,15 +285,34 @@ serve(async (req) => {
       console.log(`Verifying new book: ${title}`);
       const verification = await verifyKidsBook(title, author);
 
-      const coverUrl = book.cover_i
+      // Get cover from Open Library first
+      let coverUrl = book.cover_i
         ? `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`
         : null;
 
+      // Fallback: Try Google Books API for cover if Open Library doesn't have one
+      if (!coverUrl) {
+        try {
+          const gbQuery = encodeURIComponent(`intitle:${title}${author ? ` inauthor:${author}` : ''}`);
+          const gbResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${gbQuery}&maxResults=1`);
+          if (gbResponse.ok) {
+            const gbData = await gbResponse.json();
+            const imageLinks = gbData.items?.[0]?.volumeInfo?.imageLinks;
+            if (imageLinks) {
+              coverUrl = (imageLinks.thumbnail || imageLinks.smallThumbnail)?.replace('http:', 'https:') || null;
+              console.log(`✓ Cover found via Google Books fallback`);
+            }
+          }
+        } catch (e) {
+          console.error("Google Books cover fetch failed:", e);
+        }
+      }
+
       if (verification.isKidsBook && verification.ageMax && verification.ageMax <= 12) {
-        // Kids book - insert to database
+        // Kids book - upsert to database (handles race conditions)
         const { data: newBook, error: insertError } = await supabase
           .from("books")
-          .insert({
+          .upsert({
             title: title,
             author: author,
             cover_url: coverUrl,
@@ -301,6 +320,9 @@ serve(async (req) => {
             age_min: verification.ageMin,
             age_max: verification.ageMax,
             enrichment_status: "pending",
+          }, { 
+            onConflict: 'open_library_id',
+            ignoreDuplicates: true 
           })
           .select()
           .single();
