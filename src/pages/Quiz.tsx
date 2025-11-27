@@ -37,11 +37,7 @@ const Quiz = () => {
     });
   }, []);
 
-  // Reset answer state when question changes to prevent visual bleed-through
-  useEffect(() => {
-    setSelectedAnswer(null);
-    setShowFeedback(false);
-  }, [currentQuestion]);
+  // Removed useEffect - state reset now happens in handleNext before render
 
   // Fetch or generate quiz
   const { data: quizData, isLoading, error: quizError } = useQuery({
@@ -188,9 +184,10 @@ const Quiz = () => {
 
   const handleNext = async () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
+      // Reset state FIRST before changing question to prevent visual bleed-through
       setSelectedAnswer(null);
       setShowFeedback(false);
+      setCurrentQuestion(currentQuestion + 1);
     } else {
       // Record completion event, save quiz history, and track question responses
       try {
@@ -334,14 +331,13 @@ const Quiz = () => {
 
             return (
               <Button
-                key={index}
+                key={`q${currentQuestion}-opt${index}`}
                 onClick={() => handleAnswerSelect(index)}
                 className={cn(
-                  "w-full p-4 text-left font-medium text-base min-h-[56px] rounded-xl h-auto whitespace-normal justify-start transition-all duration-150 shadow-sm",
-                  !showFeedback && !isSelected && "border-2 border-gray-200 bg-white text-foreground",
+                  "w-full p-4 text-left font-medium text-base min-h-[56px] rounded-xl h-auto whitespace-normal justify-start transition-all duration-150 shadow-sm bg-white border-2 border-gray-200 text-foreground",
                   !showFeedback && "active:scale-[0.98] active:bg-gray-50",
-                  showCorrect && "border-2 border-quiz-correct-border bg-quiz-correct text-foreground",
-                  showWrong && "border-2 border-quiz-wrong-border bg-quiz-wrong text-foreground"
+                  showCorrect && "!border-quiz-correct-border !bg-quiz-correct",
+                  showWrong && "!border-quiz-wrong-border !bg-quiz-wrong"
                 )}
                 disabled={showFeedback}
                 variant="ghost"
