@@ -94,9 +94,9 @@ const Popular = () => {
 
   return (
     <div className="min-h-screen pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/50 px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
+      {/* Header - Compact */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/50 px-3 py-2">
+        <div className="max-w-2xl mx-auto flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
@@ -105,28 +105,28 @@ const Popular = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">⭐ Popular</h1>
+          <h1 className="text-xl font-bold text-foreground">⭐ Popular</h1>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-6 mt-6">
+      <div className="max-w-2xl mx-auto px-3 space-y-4 mt-4">
         {/* Featured Carousel - Top 3 */}
         {!isLoading && allPopularBooks && allPopularBooks.length >= 3 && (
-          <div className="space-y-3">
-            <h2 className="text-lg font-bold text-foreground px-2">🏆 Trending Now</h2>
+          <div className="space-y-2">
+            <h2 className="text-base font-bold text-foreground px-1">🏆 Trending Now</h2>
             <FeaturedCarousel books={allPopularBooks} />
           </div>
         )}
 
-        {/* Search Bar */}
+        {/* Search Bar - Compact */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder={`Search ${allPopularBooks?.length || 0} books...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-14 rounded-full shadow-sm border-2 focus:border-primary"
+            className="pl-10 h-12 rounded-full shadow-sm border-2 focus:border-primary text-sm"
           />
         </div>
 
@@ -135,18 +135,18 @@ const Popular = () => {
 
         {/* Book Count */}
         {!isLoading && popularBooks && (
-          <p className="text-sm text-muted-foreground px-2">
+          <p className="text-xs text-muted-foreground px-1">
             Showing <span className="font-semibold text-foreground">{popularBooks.length}</span> 
             {searchQuery ? ' matching' : ''} book{popularBooks.length !== 1 ? 's' : ''}
             {hasMore && ` (${filteredBooks?.length || 0} total)`}
           </p>
         )}
 
-        {/* Books List */}
+        {/* Books Grid - 2 Columns */}
         {isLoading && <BookListSkeleton count={20} />}
 
         {popularBooks && popularBooks.length > 0 && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
             {popularBooks.map((book: PopularBook, index: number) => (
               <BookCard key={book.book_id} book={book} index={index} />
             ))}
@@ -176,14 +176,14 @@ const Popular = () => {
           </Card>
         )}
 
-        {/* Load More Button - Floating */}
+        {/* Load More Button - Inline */}
         {hasMore && !isLoading && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4">
+          <div className="pt-2 pb-4">
             <Button
               variant="default"
               size="lg"
               onClick={() => setDisplayCount(prev => prev + LOAD_MORE_AMOUNT)}
-              className="w-full rounded-full shadow-xl backdrop-blur-xl bg-primary/90 hover:bg-primary min-h-[56px] font-bold"
+              className="w-full rounded-full shadow-md min-h-[48px] font-bold"
             >
               ↓ Load More ({displayCount}/{filteredBooks?.length || 0})
             </Button>
