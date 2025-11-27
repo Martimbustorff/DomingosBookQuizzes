@@ -342,17 +342,9 @@ serve(async (req) => {
           });
         }
       } else {
-        // NOT a kids book - return as unavailable but DON'T store
-        console.log(`❌ Not a kids book: ${title}`);
-        processedApiBooks.push({
-          id: `temp-${book.key}`, // Temporary ID for display only
-          title: title,
-          author: author,
-          cover_url: coverUrl,
-          age_min: null,
-          age_max: null,
-          available: false,
-        });
+        // NOT a kids book - skip completely, don't show in results
+        console.log(`❌ Not a kids book (hidden from results): ${title}`);
+        continue;
       }
     }
 
