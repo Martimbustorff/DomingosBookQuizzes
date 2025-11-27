@@ -343,15 +343,19 @@ serve(async (req) => {
       try {
         console.log(`[LAST RESORT] Using AI web search with Google Search grounding...`);
         
-        const searchPrompt = `Search the web for a detailed plot summary of the children's book "${book.title}" by ${book.author || "unknown author"}. 
+        const searchPrompt = `Search the web for this EXACT children's book:
+- Title: "${book.title}" (EXACT TITLE MATCH REQUIRED)
+- Author: ${book.author || "unknown"} (EXACT AUTHOR MATCH REQUIRED)
 
-Find and return a factual 200-300 word plot summary that includes:
-- Main characters and their names
+IMPORTANT: Do NOT confuse this with similarly named books. Find the EXACT book matching both title AND author.
+
+Search for publisher descriptions, bookstore listings, or official summaries. Return a detailed 200-300 word plot summary that includes:
+- Main characters and their exact names/descriptions (animals, people, etc.)
 - Key plot events in sequence
 - Important details like objects, locations, and what happens
 - How the story resolves
 
-CRITICAL: Search for the EXACT book title and author. If you cannot find reliable information about this specific book, respond with exactly: NO_INFO_FOUND`;
+If you cannot find information about this EXACT book (matching both title AND author), respond with exactly: NO_INFO_FOUND`;
 
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
         
@@ -376,9 +380,25 @@ CRITICAL: Search for the EXACT book title and author. If you cannot find reliabl
           const summary = aiSearchData.choices?.[0]?.message?.content;
           
           if (summary && !summary.includes("NO_INFO_FOUND")) {
-            bookDescription = summary;
-            contentSource = "ai_web_search_last_resort";
-            console.log(`✓ AI Web Search (last resort): Generated description (${bookDescription.length} chars)`);
+            // Post-verification: Check if author name appears in summary
+            if (book.author) {
+              const authorLastName = book.author.toLowerCase().split(' ').pop() || '';
+              const authorMentioned = summary.toLowerCase().includes(authorLastName);
+              
+              if (!authorMentioned && authorLastName.length > 3) {
+                console.warn(`⚠️ AI content doesn't mention author "${book.author}", likely wrong book`);
+                console.warn(`  Summary preview: ${summary.substring(0, 200)}...`);
+                console.log(`✗ AI Web Search: Content validation failed`);
+              } else {
+                bookDescription = summary;
+                contentSource = "ai_web_search_last_resort";
+                console.log(`✓ AI Web Search (last resort): Generated description (${bookDescription.length} chars)`);
+              }
+            } else {
+              bookDescription = summary;
+              contentSource = "ai_web_search_last_resort";
+              console.log(`✓ AI Web Search (last resort): Generated description (${bookDescription.length} chars)`);
+            }
           } else {
             console.log(`✗ AI Web Search: No information found for this book`);
           }
