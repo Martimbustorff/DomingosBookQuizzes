@@ -162,11 +162,84 @@ serve(async (req) => {
       console.log(`⚡ Using curated content - skipping external APIs`);
     }
 
-    // Priority 2: Try Google Books API (only if no user content)
+    // Priority 2: Try AI Web Search with Google Search grounding (PRIMARY METHOD for non-curated books)
+    if (!bookDescription) {
+      console.log(`[2/5] Using AI web search with Google Search grounding...`);
+      
+      try {
+        const searchPrompt = `Search the web (Amazon, publisher sites, bookstores) for this EXACT children's book:
+- Title: "${book.title}" (EXACT TITLE MATCH REQUIRED)
+- Author: ${book.author || "unknown"} (EXACT AUTHOR MATCH REQUIRED)
+
+IMPORTANT: Do NOT confuse this with similarly named books. Find the EXACT book matching both title AND author.
+
+Search Amazon book listings, publisher descriptions, bookstore listings, or official summaries. Return a detailed 200-300 word plot summary that includes:
+- Main characters and their exact names/descriptions (animals, people, etc.)
+- Key plot events in sequence
+- Important story details (emotions, conflicts, resolutions)
+- Central themes and messages
+
+If you cannot find information about this EXACT book (matching both title AND author), respond with exactly: NO_INFO_FOUND`;
+
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        
+        if (LOVABLE_API_KEY) {
+          const aiSearchResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: "You are a book research assistant with web search access. Search Amazon, publishers, and bookstores for accurate book information. Always verify exact title and author match." },
+                { role: "user", content: searchPrompt }
+              ],
+              tools: [{ google_search: {} }]  // Enable Google Search grounding
+            }),
+          });
+          
+          if (aiSearchResponse.ok) {
+            const aiSearchData = await aiSearchResponse.json();
+            const summary = aiSearchData.choices?.[0]?.message?.content;
+            
+            if (summary && !summary.includes("NO_INFO_FOUND")) {
+              // Post-verification: Check if author name appears in summary
+              if (book.author) {
+                const authorLastName = book.author.toLowerCase().split(' ').pop() || '';
+                const authorMentioned = summary.toLowerCase().includes(authorLastName);
+                
+                if (!authorMentioned && authorLastName.length > 3) {
+                  console.warn(`⚠️ AI content doesn't mention author "${book.author}", likely wrong book`);
+                  console.warn(`  Summary preview: ${summary.substring(0, 200)}...`);
+                } else {
+                  bookDescription = summary;
+                  contentSource = "ai_web_search_primary";
+                  console.log(`✓ AI Web Search (primary): Generated description (${bookDescription.length} chars)`);
+                }
+              } else {
+                bookDescription = summary;
+                contentSource = "ai_web_search_primary";
+                console.log(`✓ AI Web Search (primary): Generated description (${bookDescription.length} chars)`);
+              }
+            } else {
+              console.log(`✗ AI Web Search: No information found`);
+            }
+          } else {
+            console.log(`✗ AI Web Search: Request failed`);
+          }
+        }
+      } catch (error) {
+        console.error("AI Web Search (primary) error:", error);
+      }
+    }
+
+    // Priority 3: Try Google Books API (fallback if AI didn't work)
     if (!bookDescription) {
       try {
         const searchQuery = `${book.title}${book.author ? ` ${book.author}` : ''}`;
-        console.log(`[2/5] Searching Google Books for: ${searchQuery}`);
+        console.log(`[3/5] Searching Google Books for: ${searchQuery}`);
         
         const gbResponse = await fetchWithTimeout(
           `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=5`,
@@ -247,10 +320,10 @@ serve(async (req) => {
       }
     }
 
-    // Priority 3: Fallback to Open Library
+    // Priority 4: Fallback to Open Library
     if (!bookDescription && book.open_library_id) {
       try {
-        console.log(`[2/5] Fetching from Open Library: ${book.open_library_id}`);
+        console.log(`[4/5] Fetching from Open Library: ${book.open_library_id}`);
         
         // Try /works/ endpoint first
         let olResponse = await fetchWithTimeout(
@@ -338,78 +411,6 @@ serve(async (req) => {
       console.log(`Cleaned description length: ${bookDescription.length} chars`);
     }
 
-    // Priority 4: Use Lovable AI web search as LAST RESORT (after validation fails)
-    if (!bookDescription) {
-      try {
-        console.log(`[LAST RESORT] Using AI web search with Google Search grounding...`);
-        
-        const searchPrompt = `Search the web for this EXACT children's book:
-- Title: "${book.title}" (EXACT TITLE MATCH REQUIRED)
-- Author: ${book.author || "unknown"} (EXACT AUTHOR MATCH REQUIRED)
-
-IMPORTANT: Do NOT confuse this with similarly named books. Find the EXACT book matching both title AND author.
-
-Search for publisher descriptions, bookstore listings, or official summaries. Return a detailed 200-300 word plot summary that includes:
-- Main characters and their exact names/descriptions (animals, people, etc.)
-- Key plot events in sequence
-- Important details like objects, locations, and what happens
-- How the story resolves
-
-If you cannot find information about this EXACT book (matching both title AND author), respond with exactly: NO_INFO_FOUND`;
-
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        
-        const aiSearchResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: "You are a research assistant with access to web search. Always search for the exact book title and author provided. Return detailed, accurate summaries only." },
-              { role: "user", content: searchPrompt }
-            ],
-            tools: [{ google_search: {} }]  // Enable Google Search grounding
-          }),
-        });
-        
-        if (aiSearchResponse.ok) {
-          const aiSearchData = await aiSearchResponse.json();
-          const summary = aiSearchData.choices?.[0]?.message?.content;
-          
-          if (summary && !summary.includes("NO_INFO_FOUND")) {
-            // Post-verification: Check if author name appears in summary
-            if (book.author) {
-              const authorLastName = book.author.toLowerCase().split(' ').pop() || '';
-              const authorMentioned = summary.toLowerCase().includes(authorLastName);
-              
-              if (!authorMentioned && authorLastName.length > 3) {
-                console.warn(`⚠️ AI content doesn't mention author "${book.author}", likely wrong book`);
-                console.warn(`  Summary preview: ${summary.substring(0, 200)}...`);
-                console.log(`✗ AI Web Search: Content validation failed`);
-              } else {
-                bookDescription = summary;
-                contentSource = "ai_web_search_last_resort";
-                console.log(`✓ AI Web Search (last resort): Generated description (${bookDescription.length} chars)`);
-              }
-            } else {
-              bookDescription = summary;
-              contentSource = "ai_web_search_last_resort";
-              console.log(`✓ AI Web Search (last resort): Generated description (${bookDescription.length} chars)`);
-            }
-          } else {
-            console.log(`✗ AI Web Search: No information found for this book`);
-          }
-        } else {
-          const errorText = await aiSearchResponse.text();
-          console.error(`AI web search failed: ${aiSearchResponse.status} - ${errorText}`);
-        }
-      } catch (error) {
-        console.error("AI web search failed:", error);
-      }
-    }
 
     if (!bookDescription) {
       console.warn(`No description found for book: ${book.title} after trying all sources including AI web search.`);

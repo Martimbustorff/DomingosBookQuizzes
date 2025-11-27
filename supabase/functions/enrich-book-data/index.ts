@@ -160,7 +160,11 @@ async function enrichBookData(
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    const enrichmentPrompt = `Analyze the book: "${bookTitle}"${bookAuthor ? ` by ${bookAuthor}` : ""}
+    const enrichmentPrompt = `Search the web (Amazon, publisher sites, bookstores) for detailed information about this EXACT children's book:
+
+- Title: "${bookTitle}"${bookAuthor ? ` by ${bookAuthor}` : ""} (EXACT MATCH REQUIRED)
+
+Search Amazon book listings, publisher descriptions, and bookstores for this EXACT book.
 
 Provide a JSON response with:
 1. is_appropriate_for_children: Boolean - Is this appropriate for children ages 5-12? Consider:
