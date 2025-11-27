@@ -10,7 +10,7 @@ interface FilterChipsProps {
 const filters = [
   { id: "all" as FilterType, label: "🌟 All", description: "All books" },
   { id: "hot" as FilterType, label: "🔥 Hot", description: "Most popular" },
-  { id: "top-rated" as FilterType, label: "⭐ Top Rated", description: "Highest scores" },
+  { id: "top-rated" as FilterType, label: "🎯 Best Scores", description: "Highest % correct" },
   { id: "most-read" as FilterType, label: "📚 Most Read", description: "Most quizzes" },
 ];
 
