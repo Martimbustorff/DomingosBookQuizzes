@@ -37,7 +37,7 @@ export const BookCard = ({ book, index }: BookCardProps) => {
       </div>
 
       {/* Book Cover */}
-      <div className="relative w-full aspect-[3/4] bg-muted">
+      <div className="relative w-full aspect-[3/4] lg:aspect-[4/5] bg-muted">
         {book.cover_url ? (
           <img
             src={book.cover_url}
@@ -52,7 +52,7 @@ export const BookCard = ({ book, index }: BookCardProps) => {
       </div>
 
       {/* Book Info */}
-      <div className="p-3 space-y-2">
+      <div className="p-3 lg:p-2 space-y-2 lg:space-y-1">
         <div>
           <h3 className="font-bold text-sm text-foreground line-clamp-2 leading-tight group-hover:text-primary transition-colors">
             {book.title}

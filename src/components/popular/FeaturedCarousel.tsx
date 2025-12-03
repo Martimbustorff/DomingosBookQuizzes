@@ -42,10 +42,10 @@ export const FeaturedCarousel = ({ books }: FeaturedCarouselProps) => {
                   <img
                     src={book.cover_url}
                     alt={book.title}
-                    className="w-16 h-24 object-cover rounded-lg shadow-md"
+                    className="w-16 h-24 sm:w-20 sm:h-28 object-cover rounded-lg shadow-md"
                   />
                 ) : (
-                  <div className="w-16 h-24 bg-muted rounded-lg flex items-center justify-center shadow-md">
+                  <div className="w-16 h-24 sm:w-20 sm:h-28 bg-muted rounded-lg flex items-center justify-center shadow-md">
                     <Book className="h-6 w-6 text-muted-foreground" />
                   </div>
                 )}
