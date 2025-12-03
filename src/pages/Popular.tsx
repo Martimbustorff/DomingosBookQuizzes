@@ -109,7 +109,7 @@ const Popular = () => {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-3 space-y-4 mt-4">
+      <div className="max-w-2xl sm:max-w-3xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 space-y-4 mt-4">
         {/* Featured Carousel - Top 3 */}
         {!isLoading && allPopularBooks && allPopularBooks.length >= 3 && (
           <div className="space-y-2">
@@ -146,7 +146,7 @@ const Popular = () => {
         {isLoading && <BookListSkeleton count={20} />}
 
         {popularBooks && popularBooks.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {popularBooks.map((book: PopularBook, index: number) => (
               <BookCard key={book.book_id} book={book} index={index} />
             ))}
