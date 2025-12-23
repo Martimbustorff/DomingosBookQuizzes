@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { BookListSkeleton } from "@/components/shared";
+import { BookListSkeleton, ConnectionError } from "@/components/shared";
 import { PopularBook } from "@/types";
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { FeaturedCarousel } from "@/components/popular/FeaturedCarousel";
 import { BookCard } from "@/components/popular/BookCard";
 import { FilterChips, FilterType } from "@/components/popular/FilterChips";
 import mascotBulldog from "@/assets/mascot-bulldog.png";
+import { isSupabaseConfigured } from "@/lib/env-validation";
 
 const INITIAL_LOAD = 20;
 const LOAD_MORE_AMOUNT = 20;
@@ -21,10 +22,15 @@ const Popular = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [displayCount, setDisplayCount] = useState(INITIAL_LOAD);
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const isBackendConfigured = isSupabaseConfigured();
 
-  const { data: allPopularBooks, isLoading } = useQuery({
+  const { data: allPopularBooks, isLoading, error: fetchError, refetch } = useQuery({
     queryKey: ["popular-books"],
     queryFn: async () => {
+      if (!isBackendConfigured) {
+        throw new Error("Backend not configured");
+      }
+
       const { data, error } = await supabase
         .from("popular_books_dynamic")
         .select("*")
@@ -33,11 +39,13 @@ const Popular = () => {
       if (error) throw error;
       
       if (!data || data.length === 0) {
-        const { data: fallback } = await supabase
+        const { data: fallback, error: fallbackError } = await supabase
           .from("books")
           .select("*")
           .order("created_at", { ascending: false })
           .limit(50);
+        
+        if (fallbackError) throw fallbackError;
         
         return fallback?.map((book, idx) => ({
           ...book,
@@ -51,6 +59,7 @@ const Popular = () => {
       
       return data;
     },
+    enabled: isBackendConfigured,
   });
 
   const filteredBooks = useMemo(() => {
@@ -143,7 +152,22 @@ const Popular = () => {
         )}
 
         {/* Books Grid - 2 Columns */}
-        {isLoading && <BookListSkeleton count={20} />}
+        {isLoading && isBackendConfigured && <BookListSkeleton count={20} />}
+
+        {/* Configuration/Connection Error */}
+        {(fetchError || !isBackendConfigured) && !isLoading && (
+          <ConnectionError
+            title={!isBackendConfigured ? "Configuration Error" : "Failed to Load Books"}
+            message={
+              !isBackendConfigured
+                ? "The app is not properly configured. Please ensure all environment variables are set correctly."
+                : "Unable to load popular books. Please check your connection and try again."
+            }
+            variant={!isBackendConfigured ? "config" : "connection"}
+            onRetry={isBackendConfigured ? () => refetch() : undefined}
+            showRetry={isBackendConfigured}
+          />
+        )}
 
         {popularBooks && popularBooks.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">

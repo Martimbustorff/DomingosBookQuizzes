@@ -12,6 +12,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, User, Mail, Lock, Loader2, Shield } from "lucide-react";
+import { isSupabaseConfigured } from "@/lib/env-validation";
+import { ConnectionError } from "@/components/shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +53,10 @@ const Settings = () => {
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
+
+  // Check if backend is configured
+  const isBackendConfigured = isSupabaseConfigured();
 
   const displayNameForm = useForm<DisplayNameFormData>({
     resolver: zodResolver(displayNameSchema),
@@ -72,9 +78,23 @@ const Settings = () => {
   }, []);
 
   const fetchUserData = async () => {
+    if (!isBackendConfigured) {
+      setLoading(false);
+      setConnectionError(true);
+      return;
+    }
+
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      setConnectionError(false);
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       
+      if (authError) {
+        console.error("Auth error:", authError);
+        setConnectionError(true);
+        setLoading(false);
+        return;
+      }
+
       if (!authUser) {
         navigate("/login");
         return;
@@ -84,11 +104,15 @@ const Settings = () => {
       emailForm.setValue("email", authUser.email || "");
 
       // Fetch profile
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", authUser.id)
         .maybeSingle();
+
+      if (profileError) {
+        console.error("Profile fetch error:", profileError);
+      }
 
       if (profileData) {
         setProfile(profileData);
@@ -96,14 +120,19 @@ const Settings = () => {
       }
 
       // Fetch roles
-      const { data: rolesData } = await supabase
+      const { data: rolesData, error: rolesError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", authUser.id);
 
+      if (rolesError) {
+        console.error("Roles fetch error:", rolesError);
+      }
+
       setRoles(rolesData?.map(r => r.role) || []);
     } catch (error: any) {
       console.error("Error fetching user data:", error);
+      setConnectionError(true);
       toast.error("Failed to load settings");
     } finally {
       setLoading(false);
@@ -177,6 +206,41 @@ const Settings = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show connection error state
+  if (connectionError || !isBackendConfigured) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 sm:p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/")}
+              className="rounded-full"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Account Settings</h1>
+              <p className="text-muted-foreground">Manage your account and preferences</p>
+            </div>
+          </div>
+          
+          <ConnectionError
+            title={!isBackendConfigured ? "Configuration Error" : "Connection Failed"}
+            message={
+              !isBackendConfigured 
+                ? "The app is not properly configured. Please ensure all environment variables are set correctly."
+                : "Unable to connect to the server. Please check your internet connection and try again."
+            }
+            variant={!isBackendConfigured ? "config" : "connection"}
+            onRetry={fetchUserData}
+          />
+        </div>
       </div>
     );
   }

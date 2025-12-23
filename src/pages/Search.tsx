@@ -3,20 +3,27 @@ import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Search as SearchIcon, ArrowLeft, Book } from "lucide-react";
+import { Search as SearchIcon, ArrowLeft, Book, WifiOff, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { isSupabaseConfigured } from "@/lib/env-validation";
+import { ConnectionError } from "@/components/shared";
 
 const Search = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const isBackendConfigured = isSupabaseConfigured();
 
   // Search books from API
-  const { data: searchResults, isLoading, error: searchError } = useQuery({
+  const { data: searchResults, isLoading, error: searchError, refetch } = useQuery({
     queryKey: ["book-search", searchQuery],
     queryFn: async () => {
       if (!searchQuery || searchQuery.length < 2) return [];
       
+      if (!isBackendConfigured) {
+        throw new Error("Backend not configured");
+      }
+
       try {
         // Call backend search endpoint
         const { data, error } = await supabase.functions.invoke("search-books", {
@@ -34,7 +41,7 @@ const Search = () => {
         throw error;
       }
     },
-    enabled: searchQuery.length >= 2,
+    enabled: searchQuery.length >= 2 && isBackendConfigured,
     retry: 2,
     retryDelay: 1000,
   });
@@ -85,11 +92,23 @@ const Search = () => {
           </div>
         )}
 
-        {searchError && searchQuery.length >= 2 && (
-          <Card className="p-6 text-center space-y-2">
-            <p className="text-muted-foreground">Unable to search at the moment</p>
-            <p className="text-sm text-muted-foreground">Please check your connection and try again</p>
-          </Card>
+        {/* Configuration Error */}
+        {!isBackendConfigured && (
+          <ConnectionError
+            title="Configuration Error"
+            message="The app is not properly configured. Please ensure all environment variables are set correctly."
+            variant="config"
+            showRetry={false}
+          />
+        )}
+
+        {/* Search Error */}
+        {searchError && searchQuery.length >= 2 && isBackendConfigured && (
+          <ConnectionError
+            title="Search Unavailable"
+            message="Unable to search books at the moment. Please check your connection and try again."
+            onRetry={() => refetch()}
+          />
         )}
 
         {searchResults && searchResults.length > 0 && (
