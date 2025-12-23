@@ -134,12 +134,12 @@ const AppContent = () => {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/popular" element={<Popular />} />
+          <Route path="/book/:bookId" element={<BookDetail />} />
           
           {/* Protected routes (require onboarding) */}
           <Route path="/" element={<OnboardingCheck><Home /></OnboardingCheck>} />
-          <Route path="/search" element={<OnboardingCheck><Search /></OnboardingCheck>} />
-          <Route path="/popular" element={<OnboardingCheck><Popular /></OnboardingCheck>} />
-          <Route path="/book/:bookId" element={<OnboardingCheck><BookDetail /></OnboardingCheck>} />
           <Route path="/quiz" element={<OnboardingCheck><Quiz /></OnboardingCheck>} />
           <Route path="/result" element={<OnboardingCheck><Result /></OnboardingCheck>} />
           <Route path="/dashboard" element={<OnboardingCheck><Dashboard /></OnboardingCheck>} />
