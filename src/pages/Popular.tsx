@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { BookListSkeleton, ConnectionError } from "@/components/shared";
+import { BookListSkeleton, ConnectionError, OnboardingPromptBanner } from "@/components/shared";
 import { PopularBook } from "@/types";
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
@@ -119,6 +119,8 @@ const Popular = () => {
       </div>
 
       <div className="max-w-2xl sm:max-w-3xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 space-y-4 mt-4">
+        {/* Onboarding Prompt */}
+        <OnboardingPromptBanner />
         {/* Featured Carousel - Top 3 */}
         {!isLoading && allPopularBooks && allPopularBooks.length >= 3 && (
           <div className="space-y-2">

@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Book, Play, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { OnboardingPromptBanner } from "@/components/shared";
 
 const BookDetail = () => {
   const { bookId } = useParams();
@@ -80,6 +81,8 @@ const BookDetail = () => {
   return (
     <div className="min-h-screen p-6 pb-24">
       <div className="max-w-2xl mx-auto space-y-6">
+        {/* Onboarding Prompt */}
+        <OnboardingPromptBanner />
         {/* Header */}
         <Button
           variant="ghost"

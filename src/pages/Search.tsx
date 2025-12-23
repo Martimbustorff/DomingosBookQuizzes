@@ -7,7 +7,7 @@ import { Search as SearchIcon, ArrowLeft, Book, WifiOff, RefreshCw } from "lucid
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { isSupabaseConfigured } from "@/lib/env-validation";
-import { ConnectionError } from "@/components/shared";
+import { ConnectionError, OnboardingPromptBanner } from "@/components/shared";
 
 const Search = () => {
   const navigate = useNavigate();
@@ -49,6 +49,8 @@ const Search = () => {
   return (
     <div className="min-h-screen p-4 sm:p-6 pb-24">
       <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
+        {/* Onboarding Prompt */}
+        <OnboardingPromptBanner />
         {/* Header */}
         <div className="flex items-center gap-3 sm:gap-4">
           <Button
