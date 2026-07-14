@@ -24,8 +24,17 @@ export const FeaturedCarousel = ({ books }: FeaturedCarouselProps) => {
         return (
           <div
             key={book.book_id}
+            role="button"
+            tabIndex={0}
+            aria-label={`Open ${book.title}`}
             onClick={() => navigate(`/book/${book.book_id}`)}
-            className="flex-1 cursor-pointer transition-all duration-300 active:scale-95 animate-fade-in"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                navigate(`/book/${book.book_id}`);
+              }
+            }}
+            className="flex-1 cursor-pointer transition-all duration-300 active:scale-95 animate-fade-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
             style={{ animationDelay: `${index * 100}ms` }}
           >
             <div className="bg-card border border-border rounded-2xl p-3 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col">

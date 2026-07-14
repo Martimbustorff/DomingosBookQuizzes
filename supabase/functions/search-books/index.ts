@@ -1,36 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, logRequest, getClientIp } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-// Rate limiting: 30 requests per minute per IP
-async function checkRateLimit(supabase: any, ipAddress: string, endpoint: string): Promise<boolean> {
-  const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
-  
-  const { data, error } = await supabase
-    .from('request_logs')
-    .select('id')
-    .eq('ip_address', ipAddress)
-    .eq('endpoint', endpoint)
-    .gte('created_at', oneMinuteAgo);
-
-  if (error) {
-    console.error('Rate limit check error:', error);
-    return true; // Allow on error to avoid blocking legitimate users
-  }
-
-  return (data?.length || 0) < 30;
-}
-
-async function logRequest(supabase: any, ipAddress: string, endpoint: string) {
-  await supabase.from('request_logs').insert({
-    ip_address: ipAddress,
-    endpoint: endpoint
-  });
-}
 
 // Heuristic check for obvious kids book patterns
 function likelyKidsBook(title: string): boolean {
@@ -164,14 +139,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get client IP address
-    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 
-                      req.headers.get('x-real-ip') || 
-                      'unknown';
+    // Get client IP address (trustworthy — see getClientIp)
+    const ipAddress = getClientIp(req);
 
-    // Check rate limit
-    const isAllowed = await checkRateLimit(supabase, ipAddress, 'search-books');
-    if (!isAllowed) {
+    // Check rate limit: 30 requests / minute per IP
+    const isRateLimited = await checkRateLimit(supabase, ipAddress, 'search-books', {
+      limit: 30,
+      windowMs: 60 * 1000,
+    });
+    if (isRateLimited) {
       return new Response(
         JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
         {
@@ -186,10 +162,17 @@ serve(async (req) => {
 
     const { query } = await req.json();
 
-    if (!query || query.length < 2) {
+    if (typeof query !== "string" || query.trim().length < 2) {
       return new Response(JSON.stringify({ books: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (query.length > 200) {
+      return new Response(
+        JSON.stringify({ error: "invalid_request", message: "Query too long." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log("Searching for books with query:", query);

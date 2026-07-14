@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { checkRateLimit, logRequest } from "../_shared/rate-limit.ts";
+import { checkRateLimit, logRequest, getClientIp } from "../_shared/rate-limit.ts";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ALLOWED_DIFFICULTIES = ["easy", "medium", "hard"];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,9 +57,32 @@ serve(async (req) => {
   }
 
   try {
-    const { bookId, numQuestions, difficulty } = await req.json();
+    const body = await req.json();
+    const bookId = body?.bookId;
+    const numQuestions = Number(body?.numQuestions);
+    const difficulty = body?.difficulty;
 
     console.log("Generating quiz:", { bookId, numQuestions, difficulty });
+
+    // Input validation (reject malformed/abusive requests before spending resources)
+    if (typeof bookId !== "string" || !UUID_RE.test(bookId)) {
+      return new Response(
+        JSON.stringify({ error: "invalid_request", message: "Invalid bookId." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!Number.isInteger(numQuestions) || numQuestions < 1 || numQuestions > 20) {
+      return new Response(
+        JSON.stringify({ error: "invalid_request", message: "numQuestions must be between 1 and 20." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (typeof difficulty !== "string" || !ALLOWED_DIFFICULTIES.includes(difficulty)) {
+      return new Response(
+        JSON.stringify({ error: "invalid_request", message: "Invalid difficulty." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -64,11 +90,12 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // ✅ PHASE 4: Rate limiting (safety net)
-    const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || 
-                     req.headers.get("x-real-ip") || 
-                     "unknown";
-    
-    const isRateLimited = await checkRateLimit(supabase, ipAddress, "generate-quiz");
+    const ipAddress = getClientIp(req);
+
+    const isRateLimited = await checkRateLimit(supabase, ipAddress, "generate-quiz", {
+      limit: 30,
+      windowMs: 60 * 1000,
+    });
     if (isRateLimited) {
       console.warn(`Rate limit exceeded for IP: ${ipAddress}`);
       return new Response(

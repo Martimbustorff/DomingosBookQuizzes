@@ -17,15 +17,10 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      // Use current origin only for localhost, otherwise always use Netlify domain
-      const redirectUrl = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')
-        ? `${window.location.origin}/reset-password`
-        : 'https://domingosbookquiz.netlify.app/reset-password';
-      
-      console.log('Current hostname:', window.location.hostname);
-      console.log('Sending password reset to:', email);
-      console.log('Redirect URL:', redirectUrl);
-      
+      // Always send the recovery link back to the origin the user is on,
+      // so reset works on every deployment (custom domain, previews, etc.).
+      const redirectUrl = `${window.location.origin}/reset-password`;
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });

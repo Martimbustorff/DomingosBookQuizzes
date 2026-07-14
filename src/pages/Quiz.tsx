@@ -10,6 +10,7 @@ import { Volume2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { quizEventSchema } from "@/lib/validation";
 import { cn } from "@/lib/utils";
+import { updateUserStats, computeQuizPoints } from "@/lib/achievements";
 
 interface Question {
   text: string;
@@ -29,7 +30,9 @@ const Quiz = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [score, setScore] = useState(0);
   const [answers, setAnswers] = useState<boolean[]>([]);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -165,6 +168,7 @@ const Quiz = () => {
 
     const isCorrect = index === currentQ.correct_index;
     setAnswers([...answers, isCorrect]);
+    setSelectedIndices([...selectedIndices, index]);
     if (isCorrect) {
       setScore(score + 1);
       // Trigger confetti for correct answer
@@ -189,7 +193,13 @@ const Quiz = () => {
       setShowFeedback(false);
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      // Record completion event, save quiz history, and track question responses
+      // Guard against a double submit (double click / re-entry): completion
+      // writes must happen exactly once per quiz.
+      if (isCompleting) return;
+      setIsCompleting(true);
+
+      // Record completion event, save quiz history, and track question responses.
+      // This handler is the SINGLE place that persists a completed quiz.
       try {
         // Always increment book popularity
         await supabase.rpc("increment_book_popularity", { p_book_id: bookId });
@@ -205,32 +215,27 @@ const Quiz = () => {
 
         await supabase.from("events").insert(eventData);
 
-        // Save quiz history and question responses for authenticated users
-        if (userId) {
-          const pointsEarned = Math.round((score / questions.length) * 100);
-          
-          const { data: quizHistoryRecord, error: historyError } = await supabase
-            .from("quiz_history")
-            .insert({
-              user_id: userId,
-              book_id: bookId,
-              score,
-              total_questions: questions.length,
-              difficulty,
-              points_earned: pointsEarned,
-            })
-            .select()
-            .single();
+        // Persist stats + quiz history + per-question responses for authenticated users
+        if (userId && bookId) {
+          const pointsEarned = computeQuizPoints(score);
 
-          if (historyError) {
-            console.error("Failed to save quiz history:", historyError);
-          } else if (quizHistoryRecord) {
-            // Save individual question responses
+          // updateUserStats is the single writer of quiz_history and returns its id
+          const { quizHistoryId } = await updateUserStats(
+            userId,
+            bookId,
+            score,
+            questions.length,
+            difficulty,
+            pointsEarned
+          );
+
+          if (quizHistoryId) {
+            // Save individual question responses (record the ACTUAL chosen answer)
             const questionResponses = questions.map((q, index) => ({
-              quiz_history_id: quizHistoryRecord.id,
+              quiz_history_id: quizHistoryId,
               question_index: index,
               question_text: q.text,
-              selected_answer_index: answers[index] ? q.correct_index : (answers[index] === false ? -1 : -1),
+              selected_answer_index: selectedIndices[index] ?? -1,
               correct_answer_index: q.correct_index,
               is_correct: answers[index] || false,
               time_spent_ms: null,
@@ -251,7 +256,9 @@ const Quiz = () => {
       }
 
       navigate(
-        `/result?score=${score}&total=${questions.length}&bookId=${bookId}`
+        `/result?score=${score}&total=${questions.length}&bookId=${bookId}&difficulty=${encodeURIComponent(
+          difficulty
+        )}`
       );
     }
   };
