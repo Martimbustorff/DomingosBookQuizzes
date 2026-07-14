@@ -98,11 +98,8 @@ Rules:
 
     if (!response.ok) {
       console.error(`[VERIFY] AI verification failed: ${response.status}`);
-      // If heuristics suggest kids book, be optimistic
-      if (likelyKids) {
-        console.log(`[VERIFY] Defaulting to kids book based on heuristics`);
-        return { isKidsBook: true, ageMin: 5, ageMax: 10 };
-      }
+      // Fail closed: if we cannot verify the book is for children, do NOT add
+      // it. Being optimistic here is exactly what let non-children books in.
       return { isKidsBook: false, ageMin: null, ageMax: null };
     }
 
@@ -119,11 +116,7 @@ Rules:
     };
   } catch (error) {
     console.error("[VERIFY] Age verification error:", error);
-    // If heuristics suggest kids book and AI fails, be optimistic
-    if (likelyKids) {
-      console.log(`[VERIFY] Defaulting to kids book based on heuristics after error`);
-      return { isKidsBook: true, ageMin: 5, ageMax: 10 };
-    }
+    // Fail closed: never add an unverified book to a children's catalogue.
     return { isKidsBook: false, ageMin: null, ageMax: null };
   }
 }
