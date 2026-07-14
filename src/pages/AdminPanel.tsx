@@ -68,17 +68,22 @@ const AdminPanel = () => {
   const [enrichingBooks, setEnrichingBooks] = useState(false);
 
   useEffect(() => {
-    checkAdminAccess();
-    fetchAdmins();
-    fetchAllUsers();
-    fetchRoleDistribution();
-    fetchPopularBooks();
-    fetchQuizTemplates();
-    fetchWeeklyActiveUsers();
-    fetchLeaderboard();
-    fetchAllBooks();
-    fetchDailyVisitorActivity();
-    fetchVisitorPopularBooks();
+    // Only load admin data AFTER confirming the caller is an admin, so a
+    // non-admin who navigates to /admin never triggers the admin queries.
+    checkAdminAccess().then((allowed) => {
+      if (!allowed) return;
+      fetchAdmins();
+      fetchAllUsers();
+      fetchRoleDistribution();
+      fetchPopularBooks();
+      fetchQuizTemplates();
+      fetchWeeklyActiveUsers();
+      fetchLeaderboard();
+      fetchAllBooks();
+      fetchDailyVisitorActivity();
+      fetchVisitorPopularBooks();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchWeeklyActiveUsers = async () => {
@@ -277,11 +282,11 @@ const AdminPanel = () => {
     }
   };
 
-  const checkAdminAccess = async () => {
+  const checkAdminAccess = async (): Promise<boolean> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate("/login");
-      return;
+      return false;
     }
 
     setCurrentUser(user);
@@ -295,10 +300,11 @@ const AdminPanel = () => {
     if (!hasAdmin) {
       toast.error("Access denied: Admin privileges required");
       navigate("/");
-      return;
+      return false;
     }
 
     setIsAdmin(true);
+    return true;
   };
 
   const fetchAdmins = async () => {

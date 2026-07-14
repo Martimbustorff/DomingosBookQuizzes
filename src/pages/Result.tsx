@@ -5,11 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Star, RotateCcw, BookOpen, TrendingUp } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
-import { updateUserStats } from "@/lib/achievements";
-import { toast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { computeQuizPoints } from "@/lib/achievements";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { QuizResult, UserStats } from "@/types";
 
 const Result = () => {
   const [searchParams] = useSearchParams();
@@ -18,108 +16,42 @@ const Result = () => {
   const score = parseInt(searchParams.get("score") || "0");
   const total = parseInt(searchParams.get("total") || "10");
   const bookId = searchParams.get("bookId");
-  const difficulty = searchParams.get("difficulty") || "medium";
 
   const percentage = Math.round((score / total) * 100);
-  const [points, setPoints] = useState(0);
+  const points = computeQuizPoints(score);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Optimistic mutation for saving results
-  const saveResultsMutation = useMutation({
-    mutationFn: async ({ userId, bookId, score, total, difficulty, earnedPoints }: {
-      userId: string;
-      bookId: string;
-      score: number;
-      total: number;
-      difficulty: string;
-      earnedPoints: number;
-    }) => {
-      await updateUserStats(userId, bookId, score, total, difficulty, earnedPoints);
-      return { earnedPoints };
-    },
-    onMutate: async ({ earnedPoints }) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["user-stats"] });
-      await queryClient.cancelQueries({ queryKey: ["dashboard"] });
-
-      // Snapshot previous values
-      const previousStats = queryClient.getQueryData<UserStats>(["user-stats"]);
-
-      // Optimistically update stats
-      if (previousStats) {
-        queryClient.setQueryData<UserStats>(["user-stats"], (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            total_points: old.total_points + earnedPoints,
-            quizzes_completed: old.quizzes_completed + 1,
-          };
-        });
-      }
-
-      return { previousStats };
-    },
-    onError: (error: any, variables, context) => {
-      // Rollback on error
-      if (context?.previousStats) {
-        queryClient.setQueryData(["user-stats"], context.previousStats);
-      }
-      
-      console.error("Error saving results:", error);
-      toast({
-        title: "Couldn't save your progress",
-        description: "But don't worry, your points are still counted!",
-        variant: "destructive",
-      });
-
-      // Fallback to localStorage
-      const currentPoints = parseInt(localStorage.getItem("totalPoints") || "0");
-      localStorage.setItem("totalPoints", (currentPoints + variables.earnedPoints).toString());
-    },
-    onSuccess: () => {
-      // Invalidate and refetch relevant queries
-      queryClient.invalidateQueries({ queryKey: ["user-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["parent-dashboard-children"] });
-    },
-  });
-
+  // This screen is display-only. The completed quiz (stats, history and
+  // per-question responses) is already persisted once, in Quiz.tsx, before
+  // navigating here. We only celebrate, refresh cached data, and keep an
+  // offline points tally for anonymous users.
   useEffect(() => {
-    const saveResults = async () => {
-      // Trigger confetti for good scores
-      if (percentage >= 70) {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
-      }
+    if (percentage >= 70) {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    }
 
-      // Award points based on performance
-      const earnedPoints = score * 10;
-      setPoints(earnedPoints);
-
-      // Save to database if user is authenticated
+    const finalize = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setIsAuthenticated(!!user);
-      
-      if (user && bookId) {
-        saveResultsMutation.mutate({
-          userId: user.id,
-          bookId,
-          score,
-          total,
-          difficulty,
-          earnedPoints,
-        });
+
+      if (user) {
+        // Stats were written by Quiz.tsx; just refresh anything cached.
+        queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["parent-dashboard-children"] });
       } else {
-        // Fallback to localStorage for non-authenticated users
+        // Offline points tally for non-authenticated users
         const currentPoints = parseInt(localStorage.getItem("totalPoints") || "0");
-        localStorage.setItem("totalPoints", (currentPoints + earnedPoints).toString());
+        localStorage.setItem("totalPoints", (currentPoints + points).toString());
       }
     };
 
-    saveResults();
+    finalize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Determine stars and message

@@ -101,17 +101,23 @@ const OnboardingCheck = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [isChecking, setIsChecking] = useState(true);
 
+  const [allowed, setAllowed] = useState(false);
+
   useEffect(() => {
     const onboardingComplete = localStorage.getItem('onboarding_complete');
-    
+
     if (!onboardingComplete) {
       navigate('/onboarding');
+    } else {
+      setAllowed(true);
     }
-    
+
     setIsChecking(false);
   }, [navigate]);
 
-  if (isChecking) {
+  // Render nothing until the check passes, so protected content never flashes
+  // on-screen while the redirect to /onboarding is in flight.
+  if (isChecking || !allowed) {
     return null;
   }
 
@@ -137,7 +143,11 @@ const AppContent = () => {
           <Route path="/search" element={<Search />} />
           <Route path="/popular" element={<Popular />} />
           <Route path="/book/:bookId" element={<BookDetail />} />
-          
+          {/* Invitation acceptance must bypass onboarding: an invited user
+              arriving on a fresh device has no onboarding flag yet, and the
+              page does its own auth gating (redirects to /login?redirect=). */}
+          <Route path="/accept-invitation/:code" element={<AcceptInvitation />} />
+
           {/* Protected routes (require onboarding) */}
           <Route path="/" element={<OnboardingCheck><Home /></OnboardingCheck>} />
           <Route path="/quiz" element={<OnboardingCheck><Quiz /></OnboardingCheck>} />
@@ -145,7 +155,6 @@ const AppContent = () => {
           <Route path="/dashboard" element={<OnboardingCheck><Dashboard /></OnboardingCheck>} />
           <Route path="/parent-dashboard" element={<OnboardingCheck><ParentDashboard /></OnboardingCheck>} />
           <Route path="/child/:childId" element={<OnboardingCheck><ChildProgress /></OnboardingCheck>} />
-          <Route path="/accept-invitation/:code" element={<OnboardingCheck><AcceptInvitation /></OnboardingCheck>} />
           <Route path="/settings" element={<OnboardingCheck><Settings /></OnboardingCheck>} />
           <Route path="/admin" element={<OnboardingCheck><AdminPanel /></OnboardingCheck>} />
           <Route path="/contribute" element={<OnboardingCheck><Contribute /></OnboardingCheck>} />

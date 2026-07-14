@@ -1,6 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+/**
+ * Single source of truth for how quiz points are awarded.
+ * 10 points per correct answer. Used both for what is stored in
+ * quiz_history/user_stats and for what is shown to the user on the
+ * result screen, so the two can never diverge.
+ */
+export const computeQuizPoints = (score: number): number => score * 10;
+
 interface UserStats {
   total_points: number;
   quizzes_completed: number;
@@ -149,8 +157,10 @@ export const updateUserStats = async (
       stats = newStats;
     }
 
-    // Calculate streak
-    const today = new Date().toISOString().split('T')[0];
+    // Calculate streak (use LOCAL calendar date, not UTC, so late-evening
+    // quizzes are attributed to the user's actual day)
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const lastQuizDate = stats.last_quiz_date;
     let newStreak = stats.current_streak;
 
@@ -201,8 +211,8 @@ export const updateUserStats = async (
 
     if (updateError) throw updateError;
 
-    // Insert quiz history
-    const { error: historyError } = await supabase
+    // Insert quiz history (this function is the SINGLE writer of quiz_history)
+    const { data: historyRecord, error: historyError } = await supabase
       .from("quiz_history")
       .insert({
         user_id: userId,
@@ -211,7 +221,9 @@ export const updateUserStats = async (
         total_questions: totalQuestions,
         difficulty,
         points_earned: pointsEarned
-      });
+      })
+      .select("id")
+      .single();
 
     if (historyError) throw historyError;
 
@@ -219,7 +231,7 @@ export const updateUserStats = async (
     const isPerfectScore = score === totalQuestions;
     await checkAndAwardAchievements(userId, updatedStats, isPerfectScore);
 
-    return updatedStats;
+    return { stats: updatedStats, quizHistoryId: historyRecord?.id as string | undefined };
   } catch (error: any) {
     console.error("Error updating user stats:", error);
     throw error;

@@ -23,8 +23,17 @@ const ChildCard = ({
 }: ChildCardProps) => {
   return (
     <Card
-      className="cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all duration-200"
+      role="button"
+      tabIndex={0}
+      aria-label={`View ${displayName}'s progress`}
+      className="cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">

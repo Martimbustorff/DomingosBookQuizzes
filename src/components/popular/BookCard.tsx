@@ -23,9 +23,18 @@ export const BookCard = ({ book, index }: BookCardProps) => {
 
   return (
     <Card
-      className="cursor-pointer transition-all duration-300 hover:shadow-lg active:scale-95 overflow-hidden animate-fade-in group relative"
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${book.title}`}
+      className="cursor-pointer transition-all duration-300 hover:shadow-lg active:scale-95 overflow-hidden animate-fade-in group relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       style={{ animationDelay: `${index * 50}ms` }}
       onClick={() => navigate(`/book/${book.book_id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          navigate(`/book/${book.book_id}`);
+        }
+      }}
     >
       {/* Rank Badge */}
       <div className="absolute top-2 left-2 z-10">

@@ -55,7 +55,12 @@ const InvitationManager = ({ relationshipType, onClose, onInvitationCreated }: I
   };
 
   const generateInvitationCode = () => {
-    return `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    // Use a cryptographically-random, unguessable code (with a safe fallback)
+    const random =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID().replace(/-/g, "")
+        : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+    return `INV-${random.slice(0, 16).toUpperCase()}`;
   };
 
   const createInvitation = async () => {
@@ -97,16 +102,24 @@ const InvitationManager = ({ relationshipType, onClose, onInvitationCreated }: I
     }
   };
 
-  const copyToClipboard = (code: string) => {
+  const copyToClipboard = async (code: string) => {
     const inviteUrl = `${window.location.origin}/accept-invitation/${code}`;
-    navigator.clipboard.writeText(inviteUrl);
-    setCopied(code);
-    setTimeout(() => setCopied(null), 2000);
-    
-    toast({
-      title: "Copied!",
-      description: "Invitation link copied to clipboard",
-    });
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(code);
+      setTimeout(() => setCopied(null), 2000);
+      toast({
+        title: "Copied!",
+        description: "Invitation link copied to clipboard",
+      });
+    } catch {
+      // Insecure context / unsupported browser: show the link to copy manually
+      toast({
+        title: "Copy this link",
+        description: inviteUrl,
+      });
+    }
   };
 
   return (
@@ -153,7 +166,7 @@ const InvitationManager = ({ relationshipType, onClose, onInvitationCreated }: I
                   <div className="font-mono text-sm font-semibold">
                     {invitation.invitation_code}
                   </div>
-                  {invitation.profiles?.display_name && (
+                  {invitation.status === "approved" && invitation.profiles?.display_name && (
                     <div className="text-xs text-muted-foreground mt-1">
                       Connected to: {invitation.profiles.display_name}
                     </div>
