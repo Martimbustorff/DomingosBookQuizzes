@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkRateLimit, logRequest, getClientIp } from "../_shared/rate-limit.ts";
+import { generateContent } from "../_shared/ai.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALLOWED_DIFFICULTIES = ["easy", "medium", "hard"];
@@ -208,54 +209,33 @@ Search Amazon book listings, publisher descriptions, bookstore listings, or offi
 
 If you cannot find information about this EXACT book (matching both title AND author), respond with exactly: NO_INFO_FOUND`;
 
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        
-        if (LOVABLE_API_KEY) {
-          const aiSearchResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
-              messages: [
-                { role: "system", content: "You are a book research assistant with web search access. Search Amazon, publishers, and bookstores for accurate book information. Always verify exact title and author match." },
-                { role: "user", content: searchPrompt }
-              ],
-              tools: [{ google_search: {} }]  // Enable Google Search grounding
-            }),
-          });
-          
-          if (aiSearchResponse.ok) {
-            const aiSearchData = await aiSearchResponse.json();
-            const summary = aiSearchData.choices?.[0]?.message?.content;
-            
-            if (summary && !summary.includes("NO_INFO_FOUND")) {
-              // Post-verification: Check if author name appears in summary
-              if (book.author) {
-                const authorLastName = book.author.toLowerCase().split(' ').pop() || '';
-                const authorMentioned = summary.toLowerCase().includes(authorLastName);
-                
-                if (!authorMentioned && authorLastName.length > 3) {
-                  console.warn(`⚠️ AI content doesn't mention author "${book.author}", likely wrong book`);
-                  console.warn(`  Summary preview: ${summary.substring(0, 200)}...`);
-                } else {
-                  bookDescription = summary;
-                  contentSource = "ai_web_search_primary";
-                  console.log(`✓ AI Web Search (primary): Generated description (${bookDescription.length} chars)`);
-                }
-              } else {
-                bookDescription = summary;
-                contentSource = "ai_web_search_primary";
-                console.log(`✓ AI Web Search (primary): Generated description (${bookDescription.length} chars)`);
-              }
+        const summary = await generateContent({
+          system: "You are a book research assistant with web search access. Search Amazon, publishers, and bookstores for accurate book information. Always verify exact title and author match.",
+          user: searchPrompt,
+          grounding: true,
+        });
+
+        if (summary && !summary.includes("NO_INFO_FOUND")) {
+          // Post-verification: Check if author name appears in summary
+          if (book.author) {
+            const authorLastName = book.author.toLowerCase().split(' ').pop() || '';
+            const authorMentioned = summary.toLowerCase().includes(authorLastName);
+
+            if (!authorMentioned && authorLastName.length > 3) {
+              console.warn(`⚠️ AI content doesn't mention author "${book.author}", likely wrong book`);
+              console.warn(`  Summary preview: ${summary.substring(0, 200)}...`);
             } else {
-              console.log(`✗ AI Web Search: No information found`);
+              bookDescription = summary;
+              contentSource = "ai_web_search_primary";
+              console.log(`✓ AI Web Search (primary): Generated description (${bookDescription.length} chars)`);
             }
           } else {
-            console.log(`✗ AI Web Search: Request failed`);
+            bookDescription = summary;
+            contentSource = "ai_web_search_primary";
+            console.log(`✓ AI Web Search (primary): Generated description (${bookDescription.length} chars)`);
           }
+        } else {
+          console.log(`✗ AI Web Search: No information found`);
         }
       } catch (error) {
         console.error("AI Web Search (primary) error:", error);
@@ -474,12 +454,7 @@ If you cannot find information about this EXACT book (matching both title AND au
       );
     }
 
-    // Generate new quiz using Lovable AI
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
-    }
-
+    // Generate new quiz using Gemini
     const difficultyInstructions: Record<string, string> = {
       easy: "Ages 5-6: Prioritize concrete WHO/WHAT questions: character names/types (What animal?), colors (What color?), simple actions (What did they do?), and obvious story events. Include visual descriptions for picture books. Keep questions 8-12 words, use simple vocabulary.",
       medium: "Ages 7-8: Mix concrete facts (characters, colors, visual details, actions) with simple WHY questions about clear motivations. Ask 'What happened when...?' and 'Why did [character] feel...?' Test both visual memory AND story sequence. Use 12-18 words per question.",
@@ -617,30 +592,18 @@ Return ONLY valid JSON in this exact format:
   ]
 }`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: `Generate ${numQuestions} quiz questions for "${book.title}".`,
-          },
-        ],
-      }),
-    });
+    let content: string;
+    try {
+      content = await generateContent({
+        system: systemPrompt,
+        user: `Generate ${numQuestions} quiz questions for "${book.title}".`,
+      });
+    } catch (aiError) {
+      const msg = aiError instanceof Error ? aiError.message : String(aiError);
+      console.error("AI API error:", msg);
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("AI API error:", aiResponse.status, errorText);
-      
-      // Handle payment/credit issues specifically
-      if (aiResponse.status === 402) {
+      // Quota / rate-limit exhausted → surface as temporarily unavailable
+      if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
         return new Response(
           JSON.stringify({
             error: "service_unavailable",
@@ -652,12 +615,9 @@ Return ONLY valid JSON in this exact format:
           }
         );
       }
-      
-      throw new Error(`AI generation failed: ${aiResponse.status}`);
-    }
 
-    const aiData = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content;
+      throw new Error(`AI generation failed: ${msg}`);
+    }
 
     if (!content) {
       throw new Error("No content from AI");

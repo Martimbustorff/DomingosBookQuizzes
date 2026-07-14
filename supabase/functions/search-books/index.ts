@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkRateLimit, logRequest, getClientIp } from "../_shared/rate-limit.ts";
+import { generateContent } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,8 +26,6 @@ async function verifyKidsBook(title: string, author: string | null): Promise<{
   ageMin: number | null;
   ageMax: number | null;
 }> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  
   // Layer 1: Heuristic pre-check for obvious kids books
   const likelyKids = likelyKidsBook(title);
   console.log(`[VERIFY] "${title}" - Heuristic check: ${likelyKids ? "LIKELY kids book" : "uncertain"}`);
@@ -80,35 +79,22 @@ Rules:
 - If NOT a kids book, set isKidsBook to false and both ages to null`;
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "You are a children's book expert with access to web search. Always search the web to verify book information. Respond only with valid JSON." },
-          { role: "user", content: prompt }
-        ],
-        tools: [{ google_search: {} }]  // Enable Google Search grounding
-      }),
+    const content = await generateContent({
+      system: "You are a children's book expert with access to web search. Always search the web to verify book information. Respond only with valid JSON.",
+      user: prompt,
+      grounding: true,
     });
 
-    if (!response.ok) {
-      console.error(`[VERIFY] AI verification failed: ${response.status}`);
-      // Fail closed: if we cannot verify the book is for children, do NOT add
-      // it. Being optimistic here is exactly what let non-children books in.
+    // Grounded responses can wrap the JSON in prose/markdown — extract it.
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error("[VERIFY] AI returned no parseable JSON");
       return { isKidsBook: false, ageMin: null, ageMax: null };
     }
+    const parsed = JSON.parse(jsonMatch[0]);
 
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-    const parsed = JSON.parse(content);
-    
     console.log(`[VERIFY] AI result: isKidsBook=${parsed.isKidsBook}, ages=${parsed.ageMin}-${parsed.ageMax}`);
-    
+
     return {
       isKidsBook: parsed.isKidsBook === true,
       ageMin: parsed.ageMin,

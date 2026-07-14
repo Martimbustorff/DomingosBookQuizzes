@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { generateContent } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -154,11 +155,7 @@ async function enrichBookData(
   // ALWAYS run AI enrichment to get age_min, age_max, key_characters, and quiz_topics
   let aiEnrichment: any = null;
   try {
-    console.log(`[ENRICH] Using Lovable AI for comprehensive book analysis (always runs)`);
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
-    }
+    console.log(`[ENRICH] Using Gemini for comprehensive book analysis (always runs)`);
 
     const enrichmentPrompt = `Search the web (Amazon, publisher sites, bookstores) for detailed information about this EXACT children's book:
 
@@ -198,69 +195,44 @@ Return ONLY valid JSON with this structure:
   "quiz_topics": ["specific detail 1", "specific detail 2"]
 }`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: "You are a children's literature expert who analyzes books to create detailed summaries and age-appropriate assessments. Use web search to find accurate age recommendations from publishers and bookstores. Always return valid JSON."
-          },
-          {
-            role: "user",
-            content: enrichmentPrompt
-          }
-        ],
-        tools: [{ google_search: {} }]  // Enable Google Search grounding for accurate age ranges
-      }),
-    });
+    const aiContent = (await generateContent({
+      system: "You are a children's literature expert who analyzes books to create detailed summaries and age-appropriate assessments. Use web search to find accurate age recommendations from publishers and bookstores. Always return valid JSON.",
+      user: enrichmentPrompt,
+      grounding: true,
+    })).trim();
 
-    if (aiResponse.ok) {
-      const aiData = await aiResponse.json();
-      const aiContent = aiData.choices?.[0]?.message?.content?.trim();
-      
-      if (aiContent) {
-        try {
-          // Extract JSON from the response (may be wrapped in markdown)
-          const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            aiEnrichment = JSON.parse(jsonMatch[0]);
-            // Use AI summary if we don't have description yet, otherwise keep existing
-            if (!description) {
-              description = aiEnrichment.summary;
-            }
-            result.sources_used.push("lovable_ai_gemini_pro_enriched");
-            console.log(`[ENRICH] ✓ Got AI enrichment: age ${aiEnrichment.age_min}-${aiEnrichment.age_max}, ${aiEnrichment.key_characters?.length || 0} characters, ${aiEnrichment.quiz_topics?.length || 0} topics`);
-          } else {
-            // Fallback: use content as description if we don't have one
-            if (!description) {
-              description = aiContent;
-            }
-            result.sources_used.push("lovable_ai_gemini_pro");
-            console.log(`[ENRICH] ✓ Got AI description (no structured data)`);
+    if (aiContent) {
+      try {
+        // Extract JSON from the response (may be wrapped in markdown)
+        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          aiEnrichment = JSON.parse(jsonMatch[0]);
+          // Use AI summary if we don't have description yet, otherwise keep existing
+          if (!description) {
+            description = aiEnrichment.summary;
           }
-        } catch (parseError) {
-          console.error(`[ENRICH] Failed to parse AI JSON:`, parseError);
+          result.sources_used.push("gemini_enriched");
+          console.log(`[ENRICH] ✓ Got AI enrichment: age ${aiEnrichment.age_min}-${aiEnrichment.age_max}, ${aiEnrichment.key_characters?.length || 0} characters, ${aiEnrichment.quiz_topics?.length || 0} topics`);
+        } else {
           // Fallback: use content as description if we don't have one
           if (!description) {
             description = aiContent;
           }
-          result.sources_used.push("lovable_ai_gemini_pro");
+          result.sources_used.push("gemini");
+          console.log(`[ENRICH] ✓ Got AI description (no structured data)`);
         }
+      } catch (parseError) {
+        console.error(`[ENRICH] Failed to parse AI JSON:`, parseError);
+        // Fallback: use content as description if we don't have one
+        if (!description) {
+          description = aiContent;
+        }
+        result.sources_used.push("gemini");
       }
-    } else {
-      const errorText = await aiResponse.text();
-      console.error(`[ENRICH] Lovable AI error:`, errorText);
-      result.errors?.push("lovable_ai: " + errorText);
     }
   } catch (error) {
-    console.error(`[ENRICH] Lovable AI error:`, error);
-    result.errors?.push("lovable_ai: " + (error as Error).message);
+    console.error(`[ENRICH] Gemini enrichment error:`, error);
+    result.errors?.push("gemini_ai: " + (error as Error).message);
   }
 
   // Check if book is appropriate for children
